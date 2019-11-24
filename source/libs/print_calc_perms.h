@@ -63,7 +63,7 @@ void print_perms_info(unsigned alphabet_length, unsigned max_wanted_length, int 
                 printf("\tprocess %d-%d :\t%lld\n", j-count, j, total_perms[j]);
         }
         char total[1000];
-        sprintf(total, "total          %lld\n",total_perms[commsize]);
+        sprintf(total, "total          %lld",total_perms[commsize]);
         {
             char delim[1000];
             int i = 0;

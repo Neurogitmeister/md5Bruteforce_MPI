@@ -11,8 +11,8 @@
 #include "../libs/mpi_userlib.h"
 
 #ifndef BENCHMARK
-    int wanted_rank; // Ранк, варианты перестановок которого требуется отобразить, задаётся аргументом main
-    unsigned int max_wanted_length; // Маскимальный размер слова при поиске коллизий,  задаётся аргументом main
+    int wanted_rank; // Ранк, варианты перестановок которого требуется отобразить,      задаётся аргументом main
+    unsigned int max_wanted_length; // Маскимальный размер слова при поиске коллизий,   задаётся аргументом main
 #endif
 
 #ifdef SYNC
@@ -20,8 +20,8 @@
 #endif
 
 #ifdef MALLOC
-    unsigned int* CLI; // (current letter index) Массив индексов букв для текущей перестановки букв
-    char* alphabet; // Алфавит,                                                   задаётся аргументом main и обрабатывается
+    unsigned int* CLI; // (Current Letter Index) Массив индексов букв для текущей перестановки букв
+    char* alphabet; // Алфавит,                                                         задаётся аргументом main и обрабатывается
     char** collisions = NULL; // Массив для хранения MAX_COLLISIONS последних коллизий
 #else
     char alphabet[ALPH_SIZE];
@@ -29,22 +29,19 @@
     char collisions[LINE_SIZE][MAX_COLLISIONS];
 #endif
 
-unsigned char
-    collision_counter = 0, // Счетчик найденных коллизий
-    collision_memory_overflow = 0, // Флаг переполнения памяти массива коллизий
-    alphabet_length, // Мощность полученного алфавита
-    wanted_length; // Текущая длина искомой строки
-
-unsigned char md5_wanted[MD5_DIGEST_LENGTH]; // Хеш искомой функции,              задаётся аргументом main
-
+unsigned char md5_wanted[MD5_DIGEST_LENGTH]; // Хеш искомой функции,                    задаётся аргументом main
+unsigned char alphabet_length; // Мощность полученного алфавита
+unsigned char wanted_length; // Текущая длина искомой строки
 unsigned int perm_running = 0; // Счетчик пермутаций (перестановок)
-
-
-
 unsigned int chunk;         // Длина блока вычислений для процесса
+
+unsigned char collision_counter = 0; // Счетчик найденных коллизий
+unsigned char collision_memory_overflow = 0; // Флаг переполнения памяти массива коллизий
 char key_found_loc = 0;     // Локальный флаг найденной коллизии
 char key_found_reduce = 0;  // Сумма флагов коллизий всех процессов
-int commsize, rank;         // Число процессов и номер данного процесса
+
+int commsize;               // Число процессов 
+int rank;                   // Номер данного процесса
 
 
 // Отображение информации о введенных аргументах запуска
@@ -367,24 +364,26 @@ int main(int argc, char **argv) {
     // Здесь выводятся входные параметры и предсказывается количество пермутаций для каждой итерации главного цикла по длине слов и по процессам
     if (!rank) {
 
-        #ifndef TIME_ONLY
+        #ifndef MEASURE_ONLY
             printf("\nHello, human! Let's break this password! :-)\n\n");    
             print_launch_info(commsize, max_wanted_length);
             printf("\n--------------------------------\n\n");
            
             print_perms_info(alphabet_length, max_wanted_length, commsize);
-            printf("\n--------------------------------\n\n");
+            printf("\n--------------------------------\n");
         #else
-            printf("N processes = %d, Max word length: %d,  Alphabet : %s\n", commsize, max_wanted_length, alphabet);
+            printf("N processes = %d, Max word length: %d,  Alphabet : %s\n", commsize, max_wanted_length, argv[1]);
         #endif
             
         #ifdef SYNC
-            printf("Sync each %d permutations\n", sync);
-            printf("\n--------------------------------\n\n");
+            printf("\nSync each %d permutations\n", sync);
+            #ifndef MEASURE_ONLY
+                printf("\n--------------------------------\n");
+            #endif
         #endif
 
         #ifndef BENCHMARK
-            printf("Collisions :\n\n");
+            printf("\nCollisions :\n\n");
         #endif
     }
     
@@ -475,7 +474,7 @@ int main(int argc, char **argv) {
     #endif
 
     if(!rank && key_found_reduce) {
-        #ifndef TIME_ONLY
+        #ifndef MEASURE_ONLY
             printf("\n");
         #endif
         printf("Collisions arrays :\n");
@@ -483,14 +482,14 @@ int main(int argc, char **argv) {
 
     MPI_Recv(NULL, 0, MPI_INT, (rank > 0) ? rank - 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);  
     if(key_found_loc) {
-       
+
         printf("rank %d : { %s",rank,collisions[0]);
         for(int j = 1; j < collision_counter; j++)
             printf(", %s", collisions[j]);
         printf(" }\n");
     }
     MPI_Ssend(NULL, 0, MPI_INT, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
-    
+
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -500,8 +499,8 @@ int main(int argc, char **argv) {
         else 
             printf("\n");
         
-        #ifndef TIME_ONLY
-            printf("\n--------------------------------\n\n");
+        #ifndef MEASURE_ONLY
+            printf("--------------------------------\n\n");
         #endif
     
     }
@@ -518,7 +517,6 @@ int main(int argc, char **argv) {
     sprintf(message,"%d (last) / %d (all)", perm_running, perm_sum);
     MPI_Print_in_rank_order_unique(commsize, rank, message);
 
-
     #ifdef BENCHMARK
     {
         double time_min, time_max, time_avg;
@@ -529,8 +527,6 @@ int main(int argc, char **argv) {
         #ifdef TIME_CHECK
             if (commsize < N_CHECK) {
                 MPI_Barrier(MPI_COMM_WORLD);
-                if(!rank)
-                    printf("\n");
                 sprintf(message,"Execution time on process %d: %lf\n", rank, time_sum);
                 MPI_Print_in_rank_order(commsize, rank, message);
             }
