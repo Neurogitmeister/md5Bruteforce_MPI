@@ -1,0 +1,61 @@
+rank   0, pwd = aaaa, perm = 1
+rank   0, pwd =  aaa, perm = 1
+rank   0, pwd =   aa, perm = 1
+rank   0, pwd =    a, perm = 1
+rank   0, pwd =    c, perm = 3
+rank   0, pwd =   df, perm = 84
+rank   0, pwd =  dgm, perm = 2197
+rank   1, pwd = dgna, perm = 1
+rank   1, pwd =  dgn, perm = 1
+rank   1, pwd =   dg, perm = 1
+rank   1, pwd =    d, perm = 1
+rank   1, pwd =    f, perm = 3
+rank   1, pwd =   gl, perm = 84
+rank   2, pwd =   gm, perm = 1
+rank   1, pwd =  gmz, perm = 2197
+rank   2, pwd = gnaa, perm = 1
+rank   2, pwd =  gna, perm = 1
+rank   2, pwd =    g, perm = 1
+rank   2, pwd =    i, perm = 3
+rank   3, pwd =    j, perm = 1
+rank   2, pwd =   jr, perm = 84
+rank   3, pwd =   js, perm = 1
+rank   2, pwd =  jtm, perm = 2197
+rank   3, pwd = jtna, perm = 1
+rank   3, pwd =  jtn, perm = 1
+rank   3, pwd =    l, perm = 3
+rank   4, pwd =    m, perm = 1
+rank   3, pwd =   mx, perm = 84
+rank   4, pwd =   my, perm = 1
+rank   3, pwd =  mzz, perm = 2197
+rank   4, pwd = naaa, perm = 1
+rank   4, pwd =  naa, perm = 1
+rank   4, pwd =    o, perm = 3
+rank   5, pwd =    p, perm = 1
+rank   4, pwd =   qd, perm = 84
+rank   5, pwd =   qe, perm = 1
+rank   4, pwd =  qgm, perm = 2197
+rank   5, pwd = qgna, perm = 1
+rank   5, pwd =  qgn, perm = 1
+rank   5, pwd =    r, perm = 3
+rank   6, pwd =    s, perm = 1
+rank   5, pwd =   tj, perm = 84
+rank   6, pwd =   tk, perm = 1
+rank   5, pwd =  tmz, perm = 2197
+rank   6, pwd = tnaa, perm = 1
+rank   6, pwd =  tna, perm = 1
+rank   6, pwd =    u, perm = 3
+rank   7, pwd =    v, perm = 1
+rank   6, pwd =   wp, perm = 84
+rank   7, pwd =   wq, perm = 1
+rank   6, pwd =  wtm, perm = 2197
+rank   7, pwd =  wtn, perm = 1
+rank   7, pwd =    x, perm = 3
+rank   1, pwd =    y, perm = 3 <== remainder
+rank   0, pwd =    z, perm = 3 <== remainder
+rank   7, pwd =   zv, perm = 84
+rank   3, pwd =   zw, perm = 84 <== remainder
+rank   2, pwd =   zx, perm = 84 <== remainder
+rank   1, pwd =   zy, perm = 84 <== remainder
+rank   0, pwd =   zz, perm = 84 <== remainder
+rank   7, pwd =  zzz, perm = 2197

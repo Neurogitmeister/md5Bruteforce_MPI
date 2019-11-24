@@ -1,0 +1,50 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+
+    "$md5" : "f3abb86bd34cf4d52698f14c0da1dc60",
+    "$alphabet_1" : "abc",
+    "$alphabet_2" : "xyz",
+    "$word_length" : 3,
+
+
+    "version": "2.0.0",
+    "tasks": [
+
+        {
+            "label": "Build and Run Test MPI",
+            "type": "shell",
+            "command": [
+                "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
+                "&& mpiexec -np 12 ./bin/md5parallel a-z 79ec16df80b57696a03bb364410061f3  4",
+                // "&& mpiexec -np 4 ./md5parallel a f3abb86bd34cf4d52698f14c0da1dc60 4",
+                // "&& mpiexec -np 4 ./md5parallel a-e 79ec16df80b57696a03bb364410061f3 4",
+                // "&& mpiexec -np 4 ./md5parallel a-e. 79ec16df80b57696a03bb364410061f3 4"
+
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build MPI V4",
+            "type": "shell",
+            "command": "mpicc -Wall -o md5parallel4 parallel_new4.c -lcrypto -lm",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Run MPI",
+            "type": "shell",
+            "command": "mpiexec -np 5 ./md5parallel abc f3abb86bd34cf4d52698f14c0da1dc60 3 6",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}
