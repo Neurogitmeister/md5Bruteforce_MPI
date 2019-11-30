@@ -9,6 +9,8 @@ double Wtime(){
 	return tv.tv_sec + (double)tv.tv_usec / 1000000;
 }
 
-double PrintTime(double seconds) {
-	printf( "%d:%d:%d", (int)(seconds/3800), (int)(seconds/60), (int)seconds );
+void PrintTime(double seconds) {
+	int trunc = (int)seconds;
+	int msec = (int)(seconds * 1000) - trunc * 1000;
+	printf( "%d:%02d:%02d.%02d", trunc/3600, trunc/60, trunc, msec );
 }

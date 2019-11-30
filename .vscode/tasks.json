@@ -20,7 +20,7 @@
             "type": "shell",
             "command": [
                 "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
-                "&& mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-z,0-9 3-1",
+                "&& mpiexec -np 8 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-z 4",
                 "&& lscpu | grep 'МГц'"
             ],
             "group": {

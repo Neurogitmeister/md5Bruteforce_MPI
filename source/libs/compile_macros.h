@@ -24,7 +24,7 @@
 #define MALLOC
 
 // Использование замеров производительности, исключение вывода на экран на участках замера
-// #define BENCHMARK
+#define BENCHMARK
 
 #ifdef BENCHMARK
 
@@ -115,6 +115,7 @@ unsigned long long perm_running = 0;// Счетчик пермутаций (пе
 unsigned char collision_counter = 0;// Счетчик найденных коллизий
 unsigned char collision_found = 0;
 double collision_time_stamp = 0.0;
+double global_time_start = 0.0;
 
 #ifdef PARALLEL
 
