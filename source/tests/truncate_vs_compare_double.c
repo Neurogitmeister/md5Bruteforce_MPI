@@ -1,48 +1,58 @@
-
-#include <mpi.h>
 #include <stdio.h>
 
-#define N 10000000
+#include "../libs/wtime.h"
+
+#define N 1000
 
 int main() {
-    int rank, commsize;
 
-    MPI_Init(NULL, NULL);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &commsize);
+    double time_min = 0.123456789;
 
+    double times_complete[] = { 0.133567, 0.153432412, 0.1513423, 0.32534452325, 0.123460000, 0.12345700000, 0.1234599999, 0.1234568 };
 
-    double time_min = 0.123456;
-    double time_complete = 0.133567;
-    double time;
+    double time, timesum = 0.0;
     {
         long long int time_a, time_b;
-        time = MPI_Wtime();
         for(int i = 0 ; i < N; i++) {
+        for(int j = 0; j < 8; j++) {
+            time = Wtime();
+                time_a = time_min * 1E+6;
+                time_b = times_complete[j] * 1E+6;
 
-            time_a = time_min * 10000;
-            time_b = time_complete * 10000;
-
-            if(time_a == time_b) {
-                continue;
-            }
+                if(time_a == time_b) {
+                   printf("%lf ", times_complete[j]);
+                }
+            time = Wtime() - time;
+            timesum += time;
         }
-        time = MPI_Wtime() - time;
+        }
     }
-    printf("rank %d, Truncate: time = %lf\n\n",rank, time);
+
+    printf("\nTruncate: time = %.15lf\n\n", timesum);
+    timesum = 0.0;
     {
         double time_compare;
-        time = MPI_Wtime();
-        for(int i = 0 ; i < N; i++) {
-
-            time_compare = time_complete - time_complete * 0.00001;
-            if(time_min > time_compare) {
-                continue;
+        for(int i = 0 ; i < N; i++){
+        for(int j = 0; j < 8; j++) {
+        
+            time = Wtime();
+            if(time_min > (times_complete[j] - times_complete[j] * 0.000001)) {
+                printf("%lf ", times_complete[j]);
             }
+            time = Wtime() - time;
+            timesum += time;
         }
-        time = MPI_Wtime() - time;
+        }
     }
-    printf("rank %d, Compare: time = %lf\n\n",rank, time);
-    MPI_Finalize();
+
+    printf("\nCompare : time = %.15lf\n\n", timesum);
+
+    double other_time_min = time_min;
+
+    double time_diff = other_time_min - time_min;
+    printf("%.15lf\n", time_diff);
+    if(time_diff == 0.0) {
+        printf("suck my cock\n");
+    }
     return 0;
 }
