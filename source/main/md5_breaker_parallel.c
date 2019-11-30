@@ -305,7 +305,7 @@ int main(int argc, char **argv) {
 
     // Указатель на массив всех найденных на процессах коллизий - результат работы функции
     char** result_collisions_array = NULL;
-    int root = 1;
+    int root = 0;
 
     // Переменные внешнего цикла while, способные осущесвлять перебор в прямом и обратном порядке длин слов,
     // в зависимости от входных аргументов :
@@ -646,7 +646,7 @@ int main(int argc, char **argv) {
                 for (int i = 0; i < commsize; i++){
                     if (counts[i] && i != root) {
                         for (int j = 0; j < counts[i]; j++) {
-                            MPI_Recv(result_collisions_array[collision_counter + j], max_wanted_length, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                            MPI_Recv(result_collisions_array[collision_counter + j], max_wanted_length + 1, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                         }
                     }
                 }
@@ -658,7 +658,7 @@ int main(int argc, char **argv) {
             } else {
                 // Отправка ряда коллизий процесса в массив коллизий корневого
                 for (int i = 0; i < collision_counter; i++) {
-                    MPI_Send(collisions[i], max_wanted_length, MPI_CHAR, root, 0, MPI_COMM_WORLD);
+                    MPI_Send(collisions[i], max_wanted_length + 1, MPI_CHAR, root, 0, MPI_COMM_WORLD);
                 }
             }
         }
@@ -711,8 +711,6 @@ int main(int argc, char **argv) {
             printf(" }\n");
         }
         MPI_Ssend(NULL, 0, MPI_INT, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
-        if (rank == commsize - 1)
-            printf("\n");
 
         MPI_Barrier(MPI_COMM_WORLD);
 
