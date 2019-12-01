@@ -1,6 +1,6 @@
 #include <sys/time.h>
 
-#include "../libs/compile_macros.h"
+#include "../libs/md5_breaker.h"
 #include "../libs/wtime.h"
 
 #ifndef PARALLEL
@@ -18,6 +18,9 @@ int recursive_permutations(unsigned curr_len) {
             #endif
         }
     } else {
+
+        perm_running++; //счетчик перебранных вариантов
+
         char current_line[wanted_length + 1];
         unsigned char current_key[MD5_DIGEST_LENGTH];
         //Заполнение текущей строки
@@ -32,7 +35,6 @@ int recursive_permutations(unsigned curr_len) {
             (current_key)
         );
 
-        perm_running++; //счетчик перебранных вариантов
 
         /*
             printf("%s|%d ", current_line, count_perm);
@@ -44,35 +46,48 @@ int recursive_permutations(unsigned curr_len) {
         // Сравнение полученного и исходного хэшей
         if (compare_hash(current_key, md5_wanted) == 0) {
             // Если коллизия:
-
-            
             
 
             #ifndef BENCHMARK
-                
-                if(wanted_rank < commsize) {
-                    printf("\nCollision with \"%s\", rank = %4d, perm = %llu / %llu\n\n", current_line, rank, perm_running, chunk);
-                } else {
-                    printf("Collision with \"%s\", rank = %4d, perm = %llu / %llu\n", current_line, rank, perm_running, chunk);
+            {
+                // Поднятие флага после первой найденой коллизии
+                if (collision_found == 0)  {
+                    collision_time_stamp = Wtime();
+                    collision_found = 1;
                 }
 
-                // Поднятие флага после первой найденой коллизии
-                if (collision_found == 0) 
-                    collision_found = 1;
+                PrintTime(collision_time_stamp - global_time_start);
+                printf("perm = %llu, collision with \"%s\"\n\n", perm_running, current_line);
+                
+            }
             #else
                 // Поднятие флага и замер времени
                 if (collision_found == 0) {
-                    collision_time_stamp = Wtime();
+                    #ifdef BENCHMARK_FIRST_COLLISION
+                        collision_time_stamp = Wtime();
+                    #endif
                     collision_found = 1;
                 }
             #endif 
 
-            strcpy(collisions[collision_counter++], current_line);
+            // Если переполнение массива коллизий
 
-            // Сброс счётчика коллизий, заполнение массива вновь с нулевого элемента
-            if(collision_counter == MAX_COLLISIONS) {
+            if ( (collision_counter) && ( (collision_counter) % MAX_COLLISIONS) == 0 ) {
+            #ifdef MALLOC
+                // Динамическое расширение и копирование всех предыдущих коллизий
+                if (expand_cstring_array(&collisions, max_wanted_length, collision_counter, collision_counter + MAX_COLLISIONS)){
+                    printf("ERROR! Couldn't allocate memory for new collisions array size!\n");
+                }
+
+            #else
+                // Обнуление счётчика для перезаписи первых добавленных коллизий
                 collision_counter = 0;
+                // Оповещение о переполнение массива, означающее что количество будет равно MAX_COLLISIONS
+                collision_overflow = 1;
+            #endif
             }
+
+            strcpy(collisions[collision_counter++], current_line);
 
                 
             #ifdef STOP_ON_FIRST
@@ -86,9 +101,18 @@ int recursive_permutations(unsigned curr_len) {
 
 int main(int argc, char **argv) {
 
-    unsigned max_wanted_length; // Маскимальный размер слова при поиске коллизий,   задаётся аргументом main
-    unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,   задаётся аргументом main
-    
+    // Переменные внешнего цикла while, способные осущесвлять перебор в прямом и обратном порядке длин слов,
+    // в зависимости от входных аргументов :
+    int increment = 1; // Инкремент
+
+    #ifdef BENCHMARK
+        // Локальные версии переменных
+        #ifndef MALLOC
+        unsigned max_wanted_length; // Маскимальный размер слова при поиске коллизий,   задаётся аргументом main
+        #endif
+        unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,    задаётся аргументом main
+    #endif
+
     if (argc != 4 ) {
         printf("Format: \"MD5 Hash\" \"Alphabet\" \"Word lenght\" \n");
         return 1;
@@ -97,7 +121,7 @@ int main(int argc, char **argv) {
 
     md5str_to_md5(md5_wanted, argv[1]); // Нахождение 128 битного хэша по входной 256 битной строке
 
-     #ifdef MALLOC
+    #ifdef MALLOC
         // Динамическое аллоцирование алфавита подсчитанной функцией длины
         parse_alphabet_malloc(argv[2], &alphabet, &alphabet_length);
     #else
@@ -107,7 +131,7 @@ int main(int argc, char **argv) {
 
 
     if(alphabet_length == 0) {
-        printf("Invalid alphabet sectioning!\
+        printf("ERROR! Invalid alphabet sectioning!\
         \nSection should look like this: a-z,\
         \n(multiple sections in a row are allowed, commas aren't included into alphabet)\n");
         return 1;
@@ -115,29 +139,23 @@ int main(int argc, char **argv) {
 
     if(parse_arg_to_unsigned(argv[3],'-',&min_wanted_length,&max_wanted_length))
     {
-        printf("Invalid max-min length argument!\n");
+        printf("ERROR! Invalid max-min length argument!\n");
         return 1;
     }
     
 
-    
-    #ifdef MALLOC
-        collisions = malloc(sizeof(char*) * MAX_COLLISIONS + sizeof(char)*(max_wanted_length+1));
-        for(int i = 0; i < MAX_COLLISIONS; i++)
-            collisions[i] = (char*)malloc(sizeof(char) * (max_wanted_length + 1));
-    #endif
-
-
-    #ifdef MALLOC
-        CLI = malloc(sizeof(unsigned short) * alphabet_length);
-    #endif
-
     printf("Alphabet[%d] : %s | Word length: %d-%d\n", 
     alphabet_length, argv[2], min_wanted_length, max_wanted_length);
+    printf("full alphabet : %s\n", alphabet);
     printf("md5 to bruteforce: ");
     md5_print(md5_wanted);
     printf("\n\n");
     print_perms_info(alphabet_length,min_wanted_length,max_wanted_length,1);
+    unsigned long long geometric;
+    if ( (geometric = geometric_series_sum(alphabet_length,min_wanted_length, max_wanted_length)) == 0 )
+        geometric = geometric_series_sum(alphabet_length,max_wanted_length, min_wanted_length);
+    printf("\n\tGeometric progression sum : %llu\n", geometric);
+
 
     #ifdef STOP_ON_FIRST
         printf("\nUSING \"STOP_ON_FIRST\"\n", SYNC_CONST);
@@ -150,28 +168,75 @@ int main(int argc, char **argv) {
         printf("\nCollisions :\n\n");
     #endif
 
-    wanted_length = min_wanted_length;
+    //  Переключение на обратный ход внешнего цикла while :
+    if (max_wanted_length < min_wanted_length) {
+        // Перестановка значений для корректной работы с памятью
+        unsigned temp = min_wanted_length;
+        min_wanted_length = max_wanted_length;
+        max_wanted_length = temp;
+        wanted_length = max_wanted_length;
+        increment = -1;
 
+    } else {
+        increment = 1;
+        wanted_length = min_wanted_length;
+    }
+
+    #ifdef MALLOC
+        collisions = malloc(sizeof(char*) * MAX_COLLISIONS + sizeof(char)*(max_wanted_length+1));
+        for(int i = 0; i < MAX_COLLISIONS; i++)
+            collisions[i] = (char*)malloc(sizeof(char) * (max_wanted_length + 1));
+        CLI = malloc(sizeof(unsigned short) * alphabet_length);
+    #endif
+
+    // Переменные замера производительности рекурсивной функции для каждого процесса
+
+    #ifdef BENCHMARK
+        double time_single; 
+        double time_sum = 0; 
+    #endif
     #ifdef BENCHMARK_SEPARATE_LENGTHS
         double times_single[max_wanted_length - min_wanted_length + 1];
     #endif
     #ifdef BENCHMARK_TOTAL_PERMS
         double time_sums[max_wanted_length - min_wanted_length + 1];
     #endif
-    #ifdef BENCHMARK
-        double time_single, time_sum; // Переменные замера времени рекурсивной функции для каждого процесса
-
-        double time_complete = Wtime(); // Переменная замера времени до завершения обхода дерева всеми процессами
+    #ifdef BENCHMARK_FIRST_COLLISION
+        double first_collision_time = 0.0, first_collision_time_sum = 0.0;  // Переменная времени нахождения первой коллизии
+        unsigned char first_collision_measured = 0;
+        double time_single_end;
+        global_time_start = Wtime();
     #endif
+
+    perm_running = 0; // Загружаем в кэш процессора
+
     do {
+
     #ifdef BENCHMARK
 
         time_single = Wtime();
         
         recursive_permutations(0);
 
-        time_single = Wtime() - time_single;
-        time_sum += time_single;
+        #ifdef BENCHMARK_FIRST_COLLISION
+            time_single_end = Wtime();
+            if (!collision_found) {
+                time_single = time_single_end - time_single;
+                time_sum += time_single;
+                first_collision_time_sum = time_sum;
+            } else {
+                if (first_collision_measured == 0) {
+                    first_collision_time = collision_time_stamp - time_single + first_collision_time_sum;
+                    first_collision_measured = 1;
+                }
+                time_single = time_single_end - time_single;
+                time_sum += time_single;
+            }
+        #else
+            time_single = Wtime() - time_single;
+            time_sum += time_single;
+        #endif
+
         #ifdef BENCHMARK_SEPARATE_LENGTHS
             times_single[wanted_length - min_wanted_length] = time_single;
         #endif
@@ -182,50 +247,124 @@ int main(int argc, char **argv) {
         recursive_permutations(0);
     #endif
 
-    } while
+        wanted_length += increment;
+    }
+    // Использование доп. условия на выход из цикла для случая синхронизации
     #ifdef STOP_ON_FIRST
-        (!collision_found && max_wanted_length > wanted_length++);
+        while ((wanted_length <= max_wanted_length && wanted_length >= min_wanted_length) && !collision_counter_reduce);
+
     #else
-        (max_wanted_length > wanted_length++);
+        while (wanted_length <= max_wanted_length && wanted_length >= min_wanted_length);
     #endif
+    
 
-    time_complete = Wtime() - time_complete;
+    if(collision_found == 0) {
 
-    if(collision_found) {
+        #ifdef BENCHMARK
+        printf("\n");
+        #endif
+        printf("-------------------------------------------\n");
+        printf("      ;C   no collisions found    >;\n");
+        printf("-------------------------------------------\n");
+    } else {
 
-        printf("!!! Collisions found !!!\n\n");
-        printf("Collisions array : { %s",collisions[0]);
+        printf("\n");
+        printf("-------------------------------------------\n");
+        printf(">>>----->  %d collision(s) found  <-----<<<\n", collision_counter);
+        printf("-------------------------------------------\n");
+
+        printf("\nCollisions array :\nsize = %d { %s", collision_counter, collisions[0]);
         for(int j = 1; j < collision_counter; j++)
             printf(", %s", collisions[j]);
         printf(" }\n");
-    } else {
-        printf("!!! Collisions not found !!!\n");
     }
 
     printf("\nPermutations executed : %llu\n\n", perm_running);
 
     #ifdef BENCHMARK
 
-        printf("Execution times for alphabet length %u, word length (WL) :\n", alphabet_length);
-       
+        printf("Execution times (in seconds) :\n");
+        printf("alphabet length = %u, word length (WL) :\n", alphabet_length);
+
+        unsigned curr_length;
+        unsigned counter_start, counter;
+        if (increment == 1) {
+            counter_start = wanted_length - min_wanted_length;
+        } else {
+            counter_start = max_wanted_length - wanted_length;
+        }
+
         #ifdef BENCHMARK_SEPARATE_LENGTHS
-        for( wanted_length = min_wanted_length; wanted_length <= max_wanted_length; wanted_length++) {
-                printf("WL %3u%5s\t%.*lf sec.\n", wanted_length," ", 6, times_single[wanted_length - min_wanted_length]);
+        counter = counter_start;
+        if (increment == 1) {
+            curr_length = min_wanted_length;
+        } else {
+            curr_length = max_wanted_length;
+        }
+
+         // Проходим по массиву замеров для разных длин слова
+        while (counter--) {
+            printf("WL %3u%5s\t%.*lf\n", curr_length," ",
+            6, times_single[curr_length - min_wanted_length]);
+            curr_length += increment;
         }
         printf("\n");
         #endif
+
         #ifdef BENCHMARK_TOTAL_PERMS
-        for( wanted_length = min_wanted_length; wanted_length <= max_wanted_length; wanted_length++) {
-                printf("WL %3u-%-3u\t%.*lf sec.\n", min_wanted_length, max_wanted_length, 6, time_sums[wanted_length-min_wanted_length]);
+        unsigned first_length;
+        counter = counter_start;
+        if (increment == 1) {
+            curr_length = min_wanted_length;
+            first_length = min_wanted_length;
+        } else {
+            curr_length = max_wanted_length;
+            first_length = max_wanted_length;
+        }
+        while (counter--) {
+            printf("WL %3u-%-3u\t%.*lf\n", first_length, curr_length,
+            6, time_sums[curr_length - min_wanted_length]);
+
+            curr_length += increment;
         }
         #else
-        printf("WL %3u-%-3u\t%.*lf sec.\n", min_wanted_length, max_wanted_length, 6, time_sum);
+        printf("WL %3u-%-3u\t%.*lf\n", min_wanted_length, max_wanted_length, 6, time_sum);
         #endif
     #endif
-    printf("\nProgram counted total collisions after : ");
+    printf("\nProgram finished after : ");
     
-    printf("%.*lf sec.\n", 6, time_complete);
+    printf("%.*lf sec.\n", 6, time_sum);
+
+    #ifdef BENCHMARK_FIRST_COLLISION
+
+    if (collision_counter == 0)
+        printf("\nFirst collision isn't found.\n");
+    else
+        printf("\n");
+    if (first_collision_measured) {
+        printf("First collision found after %lf sec.\n\n", first_collision_time);
+    }
+
+    #endif
+
+
+
+    /*  DO SOMETHING WITH RESULTING ARRAY  */
+
+
+
+    #ifdef MALLOC
     
+        for(int i = 0; i < (collision_counter / MAX_COLLISIONS) + 1; i++)
+        {
+            free(collisions[i]);
+        }
+        free(collisions);
+        free(CLI);
+        free(alphabet);
+
+    #endif
+
     return 0;
 }
 

@@ -79,7 +79,7 @@
     
 */
 
-unsigned char recursive_permutations(unsigned char curr_len, unsigned char leaf_reached) {
+unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reached) {
 
     if (curr_len != wanted_length) {
         // Часть, задающая буквы для текущей глубины curr_len, растущей с 0 до wanted_length в каждом рекурсивном вызове
@@ -283,6 +283,24 @@ void check_remainder(int num) {
             }
         #endif 
 
+        // Если переполнение массива коллизий
+
+        if ( (collision_counter) && ( (collision_counter) % MAX_COLLISIONS) == 0 ) {
+        #ifdef MALLOC
+            // Динамическое расширение и копирование всех предыдущих коллизий
+            if (expand_cstring_array(&collisions, max_wanted_length, collision_counter, collision_counter + MAX_COLLISIONS)){
+                printf("ERROR! Couldn't allocate memory for new collisions array size!\n");
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+
+        #else
+            // Обнуление счётчика для перезаписи первых добавленных коллизий
+            collision_counter = 0;
+            // Оповещение о переполнение массива, означающее что количество будет равно MAX_COLLISIONS
+            collision_overflow = 1;
+        #endif
+        }
+
         strcpy(collisions[collision_counter++], current_line);
 
         // Поднятие флага после найденой коллизии
@@ -321,9 +339,11 @@ int main(int argc, char **argv) {
     // в зависимости от входных аргументов :
     int increment = 1; // Инкремент
 
-    #if defined(BENCHMARK) //|| !defined(MALLOC)
+    #ifdef BENCHMARK
         // Локальные версии переменных
+        #ifndef MALLOC
         unsigned max_wanted_length; // Маскимальный размер слова при поиске коллизий,   задаётся аргументом main
+        #endif
         unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,    задаётся аргументом main
     #endif
 
@@ -361,7 +381,6 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        
         if (parse_arg_to_unsigned(argv[3],'-',&min_wanted_length,&max_wanted_length))
         {
             printf("ERROR! Invalid max-min length argument!\n");
@@ -475,6 +494,11 @@ int main(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Переменные замера производительности рекурсивной функции для каждого процесса
+
+    #ifdef BENCHMARK
+        double time_sum = 0.0; 
+        double time_single;
+    #endif
     #ifdef BENCHMARK_SEPARATE_LENGTHS
         double times_single[max_wanted_length - min_wanted_length + 1];
     #endif
@@ -482,15 +506,9 @@ int main(int argc, char **argv) {
         double time_sums[max_wanted_length - min_wanted_length + 1];
     #endif
     #ifdef BENCHMARK_FIRST_COLLISION
-        double first_collision_time = 0.0;
-        double time_single_end, first_collision_time_sum = 0;  // Переменная времени нахождения первой коллизии
+        double first_collision_time = 0.0, first_collision_time_sum = 0.0;  // Переменная времени нахождения первой коллизии
         unsigned char first_collision_measured = 0;
-    #endif
-    #ifdef BENCHMARK
-        
-        double time_single = MPI_Wtime();
-        double time_sum = 0.0; 
-    #else
+        double time_single_end;
         global_time_start = MPI_Wtime();
     #endif
 
@@ -573,11 +591,9 @@ int main(int argc, char **argv) {
     /*
     *
     *
-    *
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     * Рассылка всех собранных коллизий в массив коллизий корневого процесса root  *
     * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-    *
     *
     *
     */
@@ -762,22 +778,16 @@ int main(int argc, char **argv) {
     #endif
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+    fflush(stdout);
     if (rank == 0) {
         printf("\nPermutations executed:\n");
     }
     //printf("rank %d\n", rank);
     char* message = malloc(sizeof(char)*100);
     sprintf(message,"%llu (last) / %llu (total)", perm_running, perm_sum);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
+    // printf("rank = %d, %s\n", rank, message);
     MPI_Print_in_rank_order_unique(commsize, rank, message);
-
     free(message);
-
-
-        MPI_Barrier(MPI_COMM_WORLD);
 
     /*
     *
@@ -792,18 +802,22 @@ int main(int argc, char **argv) {
     #ifdef BENCHMARK
     {
 
-        double reduced_time, time_min, time_max, time_avg;
-       
+        double reduced_time = 0, time_min, time_max, time_avg;
+        if (max_wanted_length == 1)
+            MPI_Allreduce(&reduced_time, &time_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
 
         #ifdef TIME_CHECK
-            char* message = malloc(sizeof(char)*100);
+
+            MPI_Barrier(MPI_COMM_WORLD);
+            char* msg = malloc(sizeof(char)*100);
             if (rank > FIRST_RANK_TO_CHECK && rank < FIRST_RANK_TO_CHECK + N_CHECK) {
-                MPI_Barrier(MPI_COMM_WORLD);
-                sprintf(message,"Execution time on process %d: %lf\n", rank, time_sum);
-                MPI_Print_in_rank_order(commsize, rank, message);
+                sprintf(msg,"Execution time on process %d: %lf\n", rank, time_sum);
             }
-            free(message);
+            free(msg);
+
         #endif
+
 
         unsigned curr_length;
         unsigned counter_start, counter;
@@ -813,13 +827,15 @@ int main(int argc, char **argv) {
             counter_start = max_wanted_length - wanted_length;
         }
 
-        MPI_Barrier(MPI_COMM_WORLD);
 
+        MPI_Barrier(MPI_COMM_WORLD);
         if (rank == root){
-            printf("Execution times statistics (in seconds)\nprocesses = %d, alphabet length = %u, for word lengths (WL) :\n", commsize, alphabet_length);
+            printf("Execution times statistics (in seconds)\n");
+            printf("processes = %d, alphabet length = %u, for word lengths (WL) :\n", commsize, alphabet_length);
             printf("\t\tmin\t\tmax\t\tmean\n");
         }
         
+
         #ifdef BENCHMARK_SEPARATE_LENGTHS
         counter = counter_start;
         if (increment == 1) {
@@ -925,12 +941,14 @@ int main(int argc, char **argv) {
     }
 
         #ifdef BENCHMARK_FIRST_COLLISION
+
         if (rank == root) {
             if (collision_counter_reduce == 0)
                 printf("\nFirst collision isn't found.\n");
             else
                 printf("\n");
         }
+
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Recv(NULL, 0, MPI_INT, (rank > 0) ? rank - 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);  
         if (first_collision_measured) {
@@ -938,7 +956,9 @@ int main(int argc, char **argv) {
             printf("First collision on process %d found after %lf sec.\n", rank, first_collision_time);
         }
         MPI_Ssend(NULL, 0, MPI_INT, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
-        printf("\n");
+        if (rank == root)
+            printf("\n");
+
         #endif
 
     #endif

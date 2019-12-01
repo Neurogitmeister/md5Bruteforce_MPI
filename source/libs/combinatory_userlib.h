@@ -140,7 +140,7 @@ void print_perms_info(unsigned alphabet_length, unsigned min_length, unsigned ma
         len+=incr;
     }
 
-    // Подсчёт и вывод суммы итераций для каждого процесса, искоючая одинаковые результаты
+    // Подсчёт и вывод суммы итераций для каждого процесса, исключая одинаковые результаты
     if (incr == 1)
         printf("\n  Line length %d-%d :\n", min_length, max_length);
     else

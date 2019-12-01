@@ -17,7 +17,7 @@ void MPI_Print_in_rank_order(int commsize, int rank, char* message) {
 void MPI_Print_in_rank_order_unique(int commsize, int rank, char* message) {
 
     unsigned short len = strlen(message) + 1;
-    char prev_message[len];
+    char* prev_message = malloc(sizeof(char) * len);
 
     if(!rank) printf("rank    0 - ");
 
@@ -30,4 +30,6 @@ void MPI_Print_in_rank_order_unique(int commsize, int rank, char* message) {
 
 	if(rank == commsize - 1)
 		printf("%-4d : %s\n\n", rank, message);
+    free(prev_message);
+    return;
 }

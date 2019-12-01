@@ -113,7 +113,10 @@
 	    3.1.2.3. Массив индексов букв в слове по максимальной требуемой длине слова
 
 
-
+gcc -Wall -o bin/md5sum source/main/md5_get.c -lcrypto
+./bin/md5sum <word>
+mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lm -lcrypto
+mpiexec -np 2 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a 23"
 
 
 
