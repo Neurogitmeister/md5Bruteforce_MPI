@@ -609,11 +609,12 @@ int main(int argc, char **argv) {
             initiate_exchange = 0;
         }
         MPI_Bcast(&initiate_exchange, 1, MPI_UNSIGNED_CHAR, root, MPI_COMM_WORLD);
-
-        if (initiate_exchange) {
+        if (initiate_exchange == 0) {
+            result_collisions_array = collisions;
+        } else {
 
             // Приступить к передаче
-            //printf("sending...\n");
+            printf("sending...\n");
 
             unsigned char* counts = (unsigned char *)malloc(commsize*sizeof(unsigned char));
             int* recvcounts = (int *)malloc(commsize*sizeof(int));
@@ -708,7 +709,7 @@ int main(int argc, char **argv) {
                 }
             }
             free(counts);
-        }
+        } 
     }
 
     #ifdef BENCHMARK
@@ -768,9 +769,9 @@ int main(int argc, char **argv) {
         MPI_Barrier(MPI_COMM_WORLD);
 
         if (rank == root) {
-            printf("\nCollisions gathered in :\nroot %-4d size %3d  { %s", rank, collision_counter_reduce, collisions[0]);
+            printf("\nCollisions gathered in :\nroot %-4d size %3d  { %s", rank, collision_counter_reduce, result_collisions_array[0]);
             for (int j = 1; j < collision_counter; j++)
-                printf(", %s", collisions[j]);
+                printf(", %s", result_collisions_array[j]);
             printf(" }\n");
         }
 

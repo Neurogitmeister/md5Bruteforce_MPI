@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 #define BUFF_SIZE 50 // Максимальная длина обрабатываемой строки
 
@@ -136,10 +137,22 @@ ull_t get_start_block(ull_t n, ull_t rank, int nprocs) {
 }
 
 int main(int argc, char **args) {
-    if (argc != 4) {
-        printf("Format: \"Alphabet\" \"Wanted\" \"Lenght\"\n");
-        return EXIT_FAILURE;
-    }
+
+ // Всего потоков
+    int commsize = 4;
+    int rank = 3;
+
+    
+        MPI_Init(&argc, &args);
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &commsize);
+    
+
+
+	    if (argc != 4) {
+		if (rank == 0) printf("Format: \"Alphabet\" \"Wanted\" \"Lenght\"\n");
+		return EXIT_FAILURE;
+	    }
 
     alphabet = args[1];
     wanted = args[2];
@@ -149,7 +162,7 @@ int main(int argc, char **args) {
 
     buffer_current_line = malloc(sizeof(char) * wanted_length + 1);
 
-    printf("Alphabet: %s\nWanted: %s\n\n", alphabet, wanted);
+    if (rank == 0) printf("Alphabet: %s\nWanted: %s\n\n", alphabet, wanted);
 
     MD5((const unsigned char *) wanted,
         strlen(wanted),
@@ -158,16 +171,7 @@ int main(int argc, char **args) {
 
     qsort(alphabet, (size_t) alphabet_length, sizeof(char), (__compar_fn_t) strcmp);
 
-    // Всего потоков
-    int commsize = 4;
-    int rank = 3;
-
-    /*
-        MPI_Init(&argc, &args);
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &commsize);
-    */
-
+   
     long sizePerm = getSizePerm();
     comb_per_proc = get_block_size((ull_t) sizePerm, rank, commsize);
     start_comb = get_start_block((ull_t) sizePerm, (ull_t) rank, commsize);
@@ -177,15 +181,17 @@ int main(int argc, char **args) {
     wanted_length = (int) n;
     // Сколько каждый поток обрабатывает перестановок
     setIndex();
+	double time = MPI_Wtime();
     do {
         repeat_permutations(0);
         wanted_length++;
         //memset(buffer_current_line, alphabet[0], (size_t) alphabet_length);
         buffer_current_line[wanted_length] = '\0';
     } while ((wanted_length <= maximum_length) && (count_perm < comb_per_proc));
-
-    if (!isKey) printf("Sorry, but you password not found\n");
-    printf("All permutations %d %d\n", (int) sizePerm, (int) comb_per_proc);
-    // MPI_Finalize();
+	time = MPI_Wtime() - time;
+	printf("time = %lf\n", time);
+    // if (!isKey) printf("Sorry, but you password not found\n");
+    if(rank == 0) printf("All permutations %d %d\n", (int) sizePerm, (int) comb_per_proc);
+    MPI_Finalize();
     return 0;
 }
