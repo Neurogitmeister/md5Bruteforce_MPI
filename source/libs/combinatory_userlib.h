@@ -18,7 +18,7 @@ unsigned long long get_perm_total_for_rank(int alph_len, unsigned min_word_len, 
 
 // Формула суммы геометрической прогресси с элемента номер m по элемент номер n из ряда для множителя base
 unsigned long long geometric_series_sum(int base, unsigned m, unsigned n) {
-    if(m < n)
+    if (m < n && base != 1)
         return (pow(base, m) - pow(base, n + 1)) / (1 - base);
     else
         return 0;
@@ -29,11 +29,11 @@ void print_perms_info(unsigned alphabet_length, unsigned min_length, unsigned ma
 
     printf("Permutations expected (in execution order) :\n");
     
-    if(commsize == 1)  {
+    if (commsize == 1)  {
         // Последовательная версия
         printf("\n");
         unsigned long long total_perms = 0;
-        if(min_length < max_length)
+        if (min_length < max_length)
             for (unsigned i = min_length; i <= max_length; i++)
             {
                 unsigned long long n = (int)pow(alphabet_length, i);
@@ -51,7 +51,7 @@ void print_perms_info(unsigned alphabet_length, unsigned min_length, unsigned ma
         char delim[1000];
         int i = 0;
         sprintf(total, "total          %lld\n",total_perms);
-        while(i < strlen(total))
+        while (i < strlen(total))
             delim[i++] = '-';
         delim[i-1] = '\0';
         total[i] = '\0';
@@ -72,7 +72,7 @@ void print_perms_info(unsigned alphabet_length, unsigned min_length, unsigned ma
     char len;
     unsigned char incr;
     // Переключение порядка рассчёта и вывода по диапазону
-    if(min_length <= max_length) {
+    if (min_length <= max_length) {
         len = min_length;
         incr = 1;
     } else {
@@ -83,37 +83,56 @@ void print_perms_info(unsigned alphabet_length, unsigned min_length, unsigned ma
         len = max_length;
         incr = -1;
     }
+    unsigned long long n;
+    unsigned long long chunk ;
+    int rank_iter = 0;
     while (len <= max_length && len >= min_length) {
-        // Вычисления теоретического количества пермутаций под процесс
-        unsigned long long n = (int)pow(alphabet_length, len);
-        unsigned long long chunk = n / commsize;
-        for(int j = 0; j < commsize; j++){
-            perms[j] = (n % commsize > j) ? chunk + 1 : chunk;
+        // Вычисления теоретического количества пермутаций для процессов
+        n = (int)pow(alphabet_length, len);
+        chunk = n / commsize;
+        
+        for (int j = 0; j < commsize; j++) {
+           
+            if (chunk == 0) {
+                
+                if (j >= rank_iter && j < n + rank_iter) {
+                    //printf("pidor\n");
+                    perms[j] = 1;
+                } else
+                    perms[j] = 0;
+               
+            } else {
+                perms[j] = (n % commsize > j) ? chunk + 1 : chunk;
+            }
             total_perms[j] += perms[j];
             total_perms[commsize] += perms[j];
         }
-        
+        if (chunk == 0) {
+            rank_iter = (n + rank_iter) % commsize;
+            //printf("RI = %d\n", rank_iter);
+        }
+        int count;
         printf("\n  Line length %d :\n", len);
-        for(int j = 0; j < commsize; j++){
-            int count = 0;
-            while(perms[j] == perms[j+1])
+        for (int j = 0; j < commsize; j++){
+            count = 0;
+            while (perms[j] == perms[j+1])
             {
                 count++;
                 j++;
             }
-            if(count == 0)
-                printf("\tprocess %d \t%lld\n", j, perms[j]);
+            if (count == 0)
+                printf("\tprocess     %3d   %-lld\n", j, perms[j]);
             else
-                printf("\tprocesses %d-%d \t%lld\n", j-count, j, perms[j]);
+                printf("\tprocesses %3d-%-3d %-lld\n", j-count, j, perms[j]);
         }
         // Формирорование строки вывода кол-ва всех текущих перестановок для текущей длины i
-        sprintf(total, "total          %lld\n",n);
+        sprintf(total, "total             %-lld\n",n);
 
         // Формирование разделителя
         int i = 0;
-        while(i < strlen(total))
+        while (i < strlen(total))
             delim[i++] = '-';
-        delim[i-1] = '\0';
+        delim[i] = '\0';
 
         // Вывод разделителя и кол-ва перестановок
         printf("\t%s\n\t%s", delim, total);
@@ -122,29 +141,31 @@ void print_perms_info(unsigned alphabet_length, unsigned min_length, unsigned ma
     }
 
     // Подсчёт и вывод суммы итераций для каждого процесса, искоючая одинаковые результаты
-    if(incr == 1)
+    if (incr == 1)
         printf("\n  Line length %d-%d :\n", min_length, max_length);
     else
         printf("\n  Line length %d-%d :\n", max_length, min_length);
-    for(int j = 0; j < commsize; j++){
+    for (int j = 0; j < commsize; j++){
         int count = 0;
-        while(total_perms[j] == total_perms[j+1])
+        while (total_perms[j] == total_perms[j+1])
         {
             count++;
             j++;
         }
-        if(count == 0)
-            printf("\tprocess %d \t%lld\n", j, total_perms[j]);
+        if (count == 0)
+            printf("\tprocess     %3d   %-lld\n", j, total_perms[j]);
         else
-            printf("\tprocesses %d-%d \t%lld\n", j-count, j, total_perms[j]);
+            printf("\tprocesses %3d-%-3d %-lld\n", j-count, j, total_perms[j]);
     }
 
-    sprintf(total, "total          %lld",total_perms[commsize]);
+    sprintf(total, "total             %-lld",total_perms[commsize]);
     int i = 0;
-    while(i < strlen(total))
+    while (i < strlen(total))
         delim[i++] = '-';
-    delim[i-1] = '\0';
+    delim[i] = '\0';
     printf("\t%s\n\t%s\n", delim, total);
 
+    free(total_perms);
+    free(perms);
+
 }
-   

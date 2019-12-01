@@ -19,8 +19,8 @@
             "label": "Build and Run Test MPI",
             "type": "shell",
             "command": [
-                "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
-                "&& mpiexec -np 8 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-z 4",
+                // "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
+                "mpiexec -np 2 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a 23",
                 "&& lscpu | grep 'МГц'"
             ],
             "group": {
@@ -36,7 +36,14 @@
         {
             "label": "Run MPI",
             "type": "shell",
-            "command": "mpiexec -np 5 ./md5parallel abc f3abb86bd34cf4d52698f14c0da1dc60 3 6"
+            "command": [
+                "mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a 23",
+                "&& lscpu | grep 'МГц'"
+            ],
+
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }

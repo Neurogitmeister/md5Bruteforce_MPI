@@ -114,3 +114,12 @@
         }
     }
     #endif
+        // АЛГОРИТМ ПРОПУСКОВ (СТАРАЯ ВЕРСИЯ)
+            // count = 0;
+            // while (count++ < perms_curr) {
+            //     if (rank == rank_iter) {
+            //         recursive_permutations(0,0);
+            //     }
+            //     rank_iter++;
+            //     if (rank_iter == commsize) rank_iter = 0;
+            // }
