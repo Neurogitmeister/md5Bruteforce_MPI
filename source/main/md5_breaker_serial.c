@@ -1,9 +1,8 @@
 #include <sys/time.h>
 
-#include "../libs/md5_breaker.h"
+#include "../libs/md5_breaker_serial.h"
 #include "../libs/wtime.h"
 
-#ifndef PARALLEL
 
 int recursive_permutations(unsigned curr_len) {
     if (curr_len != wanted_length)  {
@@ -327,6 +326,30 @@ int main(int argc, char **argv) {
 
             curr_length += increment;
         }
+        #ifdef LOGFILE
+        unsigned curr_length_start;
+        if (increment == 1) {
+            curr_length_start = min_wanted_length;
+            first_length = min_wanted_length;
+        } else {
+            curr_length_start = max_wanted_length;
+            first_length = max_wanted_length;
+        }
+        counter = counter_start;
+        curr_length = curr_length_start;
+        printf("WL ");
+        while (counter--) {
+            printf("%u-%u ", first_length, curr_length);
+            curr_length += increment;
+        }
+        counter = counter_start;
+        curr_length = curr_length_start;
+        printf("\nSerial ");
+        while (counter--) {
+            printf("%.*lf ", 6, time_sums[curr_length - min_wanted_length]);
+            curr_length += increment;
+        }
+        #endif
         #else
         printf("WL %3u-%-3u\t%.*lf\n", min_wanted_length, max_wanted_length, 6, time_sum);
         #endif
@@ -367,13 +390,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-#else
-
-int main(int argc, char* argv[])
-{
-    printf("\n *** Compiles only without PARALLEL defined in compile_macros.h ! ***\n\n");
-    return 1;
-}
-
-#endif

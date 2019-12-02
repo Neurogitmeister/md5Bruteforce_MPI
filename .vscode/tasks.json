@@ -9,9 +9,9 @@
             "label": "Run Compare serial vs parallel",
             "type": "shell",
             "command": [
-                "mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 ab 15",
+                "mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 ab 25",
                 "&& lscpu | grep 'МГц'",
-                "&& ./bin/md5single 79ec16df80b57696a03bb364410061f3 ab 15",
+                "&& ./bin/md5single 79ec16df80b57696a03bb364410061f3 ab 25",
                 "&& lscpu | grep 'МГц'"
             ],
             "group": {
@@ -27,7 +27,7 @@
             "type": "shell",
             "command": [
                 "gcc -Wall -o bin/md5single source/main/md5_breaker_serial.c -lcrypto -lm",
-                "&& ./bin/md5single 79ec16df80b57696a03bb364410061f3 a-z  4"
+                "&& ./bin/md5single 79ec16df80b57696a03bb364410061f3 ab 25"
             ],
             "problemMatcher": [
                 "$gcc"
@@ -49,16 +49,31 @@
         {
             "label": "Build MPI",
             "type": "shell",
-            "command": "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
+            "command": [
+                "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
+                "&& gcc -Wall -o bin/md5single source/main/md5_breaker_serial.c -lcrypto -lm"
+            ],
             "problemMatcher": [
                 "$gcc"
             ]
         },
         {
+            "label": "Build Serial",
+            "type": "shell",
+            "command": [
+                "gcc -Wall -o bin/md5single source/main/md5_breaker_serial.c -lcrypto -lm"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+
+       
+        {
             "label": "Run MPI",
             "type": "shell",
             "command": [
-                "mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 abc 10",
+                "mpiexec -np 2 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 ab 25",
                 "&& lscpu | grep 'МГц'"
             ],
             "problemMatcher": [

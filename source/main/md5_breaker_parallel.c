@@ -1,6 +1,5 @@
-#include "../libs/md5_breaker.h"
+#include "../libs/md5_breaker_parallel.h"
 
-#ifdef PARALLEL
 
 #include <mpi.h>
 #include "../libs/mpi_userlib.h"
@@ -891,6 +890,61 @@ int main(int argc, char **argv) {
             }
             curr_length += increment;
         }
+        #ifdef LOGFILE
+        unsigned curr_length_start;
+        if (increment == 1) {
+            curr_length_start = min_wanted_length;
+            first_length = min_wanted_length;
+        } else {
+            curr_length_start = max_wanted_length;
+            first_length = max_wanted_length;
+        }
+        counter = counter_start;
+        curr_length = curr_length_start;
+        if (rank == root) printf("\nWL ");
+        while (counter--) {
+            reduced_time = time_sums[curr_length - min_wanted_length];
+            if (rank == root) {
+                printf("%u-%u ", first_length, curr_length);
+            }
+            curr_length += increment;
+        }
+        counter = counter_start;
+        curr_length = curr_length_start;
+        if (rank == root) printf("\nP%dmin ", commsize);
+        while (counter--) {
+            reduced_time = time_sums[curr_length - min_wanted_length];
+            MPI_Allreduce(&reduced_time, &time_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            if (rank == root) {
+                printf("%.*lf ", 6, time_min);
+            }
+            curr_length += increment;
+        }
+        counter = counter_start;
+        curr_length = curr_length_start;     
+        if (rank == root) printf("\nP%dmax ", commsize);   
+        while (counter--) {
+            reduced_time = time_sums[curr_length - min_wanted_length];
+            MPI_Allreduce(&reduced_time, &time_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            if (rank == root) {
+                printf("%.*lf ", 6, time_max);
+            }
+            curr_length += increment;
+        }
+        counter = counter_start;
+        curr_length = curr_length_start;     
+        if (rank == root) printf("\nP%davg ", commsize);  
+        while (counter--) {
+            reduced_time = time_sums[curr_length - min_wanted_length];
+            MPI_Allreduce(&reduced_time, &time_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            if (rank == root) {
+                time_avg /= commsize;
+                printf("%.*lf ", 6, time_avg);
+            }
+            curr_length += increment;
+        }
+        #endif
+
         #else
         reduced_time = time_sum;
         MPI_Allreduce(&reduced_time, &time_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
@@ -1006,13 +1060,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-
-#else
-
-int main(int argc, char* argv[])
-{
-    printf("\n *** Compiles only without PARALLEL defined in compile_macros.h ! ***\n\n");
-    return 1;
-}
-
-#endif
