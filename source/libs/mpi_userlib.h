@@ -18,18 +18,32 @@ void MPI_Print_in_rank_order_unique(int commsize, int rank, char* message) {
 
     unsigned short len = strlen(message) + 1;
     char* prev_message = malloc(sizeof(char) * len);
+    unsigned char print_message = 0;
 
-    if(!rank) printf("rank    0 - ");
+    if(rank == 0) {
+        printf("rank    0 - ");
+        fflush(stdout);
+    }
+    else {
+        MPI_Recv(prev_message, len, MPI_CHAR, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            if(strcmp(message, prev_message))
+                    print_message = 1;
+        
+    }
+    MPI_Send(message, len, MPI_CHAR, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
 
-    MPI_Recv(prev_message, len, MPI_CHAR, (rank > 0) ? rank - 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if(strcmp(message, prev_message))
-        if (rank){
-            printf("%-4d : %s\nrank %4d - ", rank - 1, prev_message, rank);
+	MPI_Recv(NULL, 0, MPI_CHAR, (rank > 0) ? rank - 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        if (print_message == 1) {
+                printf("%-4d : %s\n", rank - 1, prev_message);
+                printf("rank %4d - ", rank);
+                fflush(stdout);
         }
-	MPI_Ssend(message, len, MPI_CHAR, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
+	MPI_Ssend(NULL, 0, MPI_CHAR, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
 
-	if(rank == commsize - 1)
+	if(rank == commsize - 1) {
 		printf("%-4d : %s\n\n", rank, message);
+        fflush(stdout);
+    }
     free(prev_message);
     return;
 }
