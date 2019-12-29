@@ -9,20 +9,20 @@
 
 
 // Позволяет использовать динамическую память для массива индексов букв, массива алфавита и массива коллизий
-// #define MALLOC
+#define MALLOC
 
 
 
 // Использование замеров производительности, исключение вывода на экран на участках замера
-// #define BENCHMARK
+#define BENCHMARK
 
 
-
+/*                      Макросы, доступные при использовании замеров времени                          */
 /* * * * * * * * * * * * * * * * * * * */ #ifdef BENCHMARK /* * * * * * * * * * * * * * * * * * * * * */ 
 
 // Вывод на экран времени нахождения первой коллизии
 
-#define BENCHMARK_FIRST_COLLISION
+// #define BENCHMARK_FIRST_COLLISION
 
 
 
@@ -41,13 +41,13 @@
 
 // Позволяет выводить на экран время выполнения рекурсивной функции первых N_CHECK c FIRST_RANK_TO_CHECK процессов
 
-#define TIME_CHECK
+// #define TIME_CHECK
 
 
 
 // Вывод на экран только полезной для характеристик производительности информации
 
-// #define ONLY_BENCHMARK_INFO
+#define ONLY_BENCHMARK_INFO
 
 // #define LOGFILE
 

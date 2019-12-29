@@ -948,12 +948,12 @@ int main(int argc, char **argv) {
             }
 
             curr_length += increment;
-        } // Конец for
-        if (rank == root) printf("\n");
+        } // Конец while
         #endif
 
 
         #ifdef BENCHMARK_TOTAL_PERMS
+        if (rank == root) printf("\n");
         unsigned first_length;
         counter = counter_start;
         if (increment == 1) {
@@ -998,7 +998,7 @@ int main(int argc, char **argv) {
         }
         counter = counter_start;
         curr_length = curr_length_start;
-        if (rank == root) printf("\nP%dmin ", commsize);
+        if (rank == root) printf("\nP%d_min ", commsize);
         while (counter--) {
             reduced_time = time_sums[curr_length - min_wanted_length];
             MPI_Allreduce(&reduced_time, &time_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
@@ -1009,7 +1009,7 @@ int main(int argc, char **argv) {
         }
         counter = counter_start;
         curr_length = curr_length_start;     
-        if (rank == root) printf("\nP%dmax ", commsize);   
+        if (rank == root) printf("\nP%d_max ", commsize);   
         while (counter--) {
             reduced_time = time_sums[curr_length - min_wanted_length];
             MPI_Allreduce(&reduced_time, &time_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
@@ -1020,7 +1020,7 @@ int main(int argc, char **argv) {
         }
         counter = counter_start;
         curr_length = curr_length_start;     
-        if (rank == root) printf("\nP%davg ", commsize);  
+        if (rank == root) printf("\nP%d_avg ", commsize);  
         while (counter--) {
             reduced_time = time_sums[curr_length - min_wanted_length];
             MPI_Allreduce(&reduced_time, &time_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -1103,6 +1103,7 @@ int main(int argc, char **argv) {
             free(collisions);
             free(CLI);
             free(alphabet);
+            free(current_word);
 
         #endif
 
