@@ -1,4 +1,4 @@
-#include "../libs/md5_breaker_parallel.h"
+#include "../libs/md5_breaker_parallel_v1.h"
 
 
 #include <mpi.h>
@@ -38,6 +38,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
     |  defined(MALLOC)                |  !defined(MALLOC)                          |
     |---------------------------------|--------------------------------------------|
     |char* alphabet                   | char alphabet[ALPH_SIZE]                   |
+    |unsigned* CLI                    | unsigned CLI[LINE_SIZE]                    |
     |char* collisions[MAX_COLLISIONS] | char collisions[LINE_SIZE][MAX_COLLISIONS] |
     --------------------------------------------------------------------------------
     |   !defined(BENCHMARK)                                                   |
@@ -57,7 +58,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
 
         (sizeof(type1)[Байт] * N1 + sizeof(type2)[Байт] * N2 + ... )
 
-        8*2 + 1 + 4*2 + 1*2 + 1*(alphabet_length || ALPH_SIZE) + 1 * (max_wanted_length || LINE_SIZE) * MAX_COLLISIONS * ppn =
+        8*2 + 1 + 4*2 + 1*2 + 1*(alphabet_length || ALPH_SIZE) + 4 * (max_wanted_length || LINE_SIZE)) * ppn + 8 * (max_wanted_length || LINE_SIZE) =
 
         defined(MALLOC):
 
@@ -103,7 +104,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
     if (curr_len != wanted_length) {
         // Часть, задающая буквы для текущей глубины curr_len, растущей с 0 до wanted_length в каждом рекурсивном вызове
         unsigned short lb; // Переменные индексов циклов for
-        
+
         /* Пересчитанный под количество итераций на глубине curr_len дробный chunk,
         домножаемый на rank для получения индекса в текущем множестве итераций,
         чтобы затем определить по нему индекс в цикле for от 0 до alphabet_length - 1;*/
@@ -122,11 +123,9 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
         //printf("new len = %u, rank = %4d, chunk = %llu, resize = %lf, lb = %llu\n", curr_len, rank, chunk, chunk_resize, lb);
 
         // Проверка достижения последней итерации для процесса и проход по циклу с рекурсивным вызовом
-        char *alph_ptr = &alphabet[lb];
-	
-	    for (i = lb; i < alphabet_length && perm_running < chunk; alph_ptr++, i++) {
+        for (i = lb; i < alphabet_length && perm_running < chunk; i++) {
 
-            current_word[curr_len] = *alph_ptr;
+            CLI[curr_len] = i;
             leaf_reached = recursive_permutations(curr_len + 1, leaf_reached);
 
             #ifdef STOP_ON_FIRST
@@ -134,17 +133,21 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
                 return 2;
             }
             #endif
-	    }
-	
+        }
+		// curr_len -= 1;
         return leaf_reached;
 
     } else {
 
-        perm_running++; //Счетчик перебранных вариантов
+        perm_running++; //счетчик перебранных вариантов
 
-        //Перезапись конца текущей строки
-		
-	    current_word[curr_len] = '\0';
+        //Заполнение текущей строки
+		for (i = 0; i < wanted_length - 1; i++) {
+			if (current_word[i] != alphabet[CLI[i]])
+				current_word[i] = alphabet[CLI[i]];
+		}
+		current_word[i] = alphabet[CLI[i]];
+		current_word[++i] = '\0';
 
         #ifndef BENCHMARK
         // Вывод первого и последнего вариантов слова одного или нескольких процессов на экран, если не используются замеры производительности
@@ -533,6 +536,7 @@ int main(int argc, char **argv) {
     #ifdef MALLOC
 
 		current_word = malloc(sizeof(char) * max_wanted_length);
+        CLI = malloc(sizeof(unsigned) * max_wanted_length);
         collisions = malloc(sizeof(char*) * MAX_COLLISIONS);
         for (int i = 0; i < MAX_COLLISIONS; i++)
             collisions[i] = (char*)malloc(sizeof(char) * (max_wanted_length + 1));
@@ -1114,6 +1118,7 @@ int main(int argc, char **argv) {
                 free(collisions[i]);
             }
             free(collisions);
+            free(CLI);
             free(alphabet);
             free(current_word);
 
@@ -1129,8 +1134,8 @@ int main(int argc, char **argv) {
     #ifdef MALLOC
 
         if (rank == root) { 
+            free(CLI);
             free(alphabet);
-	    free(current_word);
         }
 
     #endif

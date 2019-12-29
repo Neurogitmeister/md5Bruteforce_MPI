@@ -1,33 +1,32 @@
 #include <sys/time.h>
 
-#include "../libs/md5_breaker_serial.h"
+#include "../libs/md5_breaker_serial_v1.h"
 #include "../libs/wtime.h"
 
 
 int recursive_permutations(const unsigned curr_len) {
     if (curr_len != wanted_length)  {
-
-    // Генерируем последовательность
-	char *alph_ptr = &alphabet[0];
-        
-    for (int j = 0; j < alphabet_length; j++, alph_ptr++) {
-        // Вставляем следующую букву
-        current_word[curr_len] = *alph_ptr;
-        // Вызываем перестановки для текущей буквы
-        #ifdef STOP_ON_FIRST
-        if (recursive_permutations(curr_len + 1))return 1;
-        #else
-        recursive_permutations(curr_len + 1);
-        #endif
-    }
-
+        for (int j = 0; j < alphabet_length; j++) {
+            // Генерируем последовательность
+            CLI[curr_len] = j;
+            // Вызываем перестановки для текущей буквы
+            #ifdef STOP_ON_FIRST
+            if (recursive_permutations(curr_len + 1))return 1;
+            #else
+            recursive_permutations(curr_len + 1);
+            #endif
+        }
     } else {
 
-        perm_running++; //Счетчик перебранных вариантов
+        perm_running++; //счетчик перебранных вариантов
 
-        //Перезапись конца текущей строки
-        
-        current_word[curr_len] = '\0';
+        //Заполнение текущей строки
+        int i;
+        for (i = 0; i < wanted_length; i++) {
+			if (current_word[i] != alphabet[CLI[i]])
+            current_word[i] = alphabet[CLI[i]];
+        }
+        current_word[i] = '\0';
 
         MD5((const unsigned char *) current_word,
             strlen(current_word),
@@ -191,6 +190,7 @@ int main(int argc, char **argv) {
         collisions = malloc(sizeof(char*) * MAX_COLLISIONS + sizeof(char)*(max_wanted_length+1));
         for(int i = 0; i < MAX_COLLISIONS; i++)
             collisions[i] = (char*)malloc(sizeof(char) * (max_wanted_length + 1));
+        CLI = malloc(sizeof(unsigned short) * alphabet_length);
     #endif
 
     // Переменные замера производительности рекурсивной функции для каждого процесса
@@ -393,6 +393,7 @@ int main(int argc, char **argv) {
             free(collisions[i]);
         }
         free(collisions);
+        free(CLI);
         free(alphabet);
 
     #endif

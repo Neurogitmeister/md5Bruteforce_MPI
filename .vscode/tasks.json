@@ -6,7 +6,7 @@
     "tasks": [
 
         {
-            "label": "Run Compare serial vs parallel",
+            "label": "Run Compare - serial vs parallel",
             "type": "shell",
             "command": [
                 "mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 ab 25",
@@ -24,7 +24,7 @@
         },
         
         {
-            "label": "Build and Run Test MPI",
+            "label": "Build and Run - Test MPI",
             "type": "shell",
             "command": [
                 "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
@@ -37,7 +37,7 @@
             ]
         },
         {
-            "label": "Build MPI & Serial",
+            "label": "Build - MPI & Serial",
             "type": "shell",
             "command": [
                 "mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm",
@@ -47,12 +47,23 @@
                 "$gcc"
             ]
         },
-       
         {
-            "label": "Run MPI",
+            "label": "Build - MPI2 & Serial2",
             "type": "shell",
             "command": [
-                "mpiexec -np 8 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-l 5 -1",
+                "mpicc -Wall -o bin/md5parallel2 source/main/md5_breaker_parallel2.c -lcrypto -lm",
+                "&& gcc -Wall -o bin/md5single2 source/main/md5_breaker_serial2.c -lcrypto -lm"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+       
+        {
+            "label": "Run - MPI",
+            "type": "shell",
+            "command": [
+                "mpiexec -np 2 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-l 5",
                 "&& lscpu | grep 'МГц'"
             ],
             "problemMatcher": [
@@ -60,7 +71,18 @@
             ]
         },
         {
-            "label": "Run serial",
+            "label": "Run - MPI2",
+            "type": "shell",
+            "command": [
+                "mpiexec -np 2 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-l 5",
+                "&& lscpu | grep 'МГц'"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Run - serial2",
             "type": "shell",
             "command": [
                 "./bin/md5single 79ec16df80b57696a03bb364410061f3 a-l 5"

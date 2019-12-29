@@ -35,6 +35,7 @@
 
 #ifdef MALLOC
 
+    unsigned* CLI;  // (Current Letter Index) Массив индексов букв для текущей перестановки букв
     char* alphabet; // Алфавит,                                                         задаётся аргументом main и обрабатывается
 	char* current_word; // Текущее слово (комбинация) для хэширования
     char** collisions = NULL; // Массив для хранения MAX_COLLISIONS или одной последних коллизий
@@ -42,7 +43,8 @@
 #else
 
     char alphabet[ALPH_SIZE];
-    char current_word[LINE_SIZE];
+    unsigned CLI[LINE_SIZE];
+	char current_word[LINE_SIZE];
     char collisions[LINE_SIZE][MAX_COLLISIONS]; // Массив для хранения MAX_COLLISIONS_PER_RPC последних коллизий
     char collision_overflow = 0;                // Флаг переполнения массива коллизий
 
