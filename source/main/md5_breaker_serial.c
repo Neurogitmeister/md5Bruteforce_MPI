@@ -4,7 +4,7 @@
 #include "../libs/wtime.h"
 
 
-int recursive_permutations(unsigned curr_len) {
+int recursive_permutations(const unsigned curr_len) {
     if (curr_len != wanted_length)  {
         for (int j = 0; j < alphabet_length; j++) {
             // Генерируем последовательность
@@ -20,24 +20,23 @@ int recursive_permutations(unsigned curr_len) {
 
         perm_running++; //счетчик перебранных вариантов
 
-        char current_line[wanted_length + 1];
-        unsigned char current_key[MD5_DIGEST_LENGTH];
         //Заполнение текущей строки
         int i;
         for (i = 0; i < wanted_length; i++) {
-            current_line[i] = alphabet[CLI[i]];
+			if (current_word[i] != alphabet[CLI[i]])
+            current_word[i] = alphabet[CLI[i]];
         }
-        current_line[i] = '\0';
+        current_word[i] = '\0';
 
-        MD5((const unsigned char *) current_line,
-            strlen(current_line),
+        MD5((const unsigned char *) current_word,
+            strlen(current_word),
             (current_key)
         );
 
 
         /*
-            printf("%s|%d ", current_line, count_perm);
-            printf("[%d] \t(%s)\t", (int)strlen(current_line), current_line);
+            printf("%s|%d ", current_word, count_perm);
+            printf("[%d] \t(%s)\t", (int)strlen(current_word), current_word);
             print(cur_key);printf(" ");
             printf("\n");
         */
@@ -56,7 +55,7 @@ int recursive_permutations(unsigned curr_len) {
                 }
 
                 PrintTime(collision_time_stamp - global_time_start);
-                printf("perm = %llu, collision with \"%s\"\n\n", perm_running, current_line);
+                printf("perm = %llu, collision with \"%s\"\n\n", perm_running, current_word);
                 
             }
             #else
@@ -79,14 +78,19 @@ int recursive_permutations(unsigned curr_len) {
                 }
 
             #else
-                // Обнуление счётчика для перезаписи первых добавленных коллизий
+				#ifdef LAST_COLLISIONS
+                // Обнуление счётчика для перезаписи первых добавленных до перезаписи коллизий
                 collision_counter = 0;
+				#endif
                 // Оповещение о переполнение массива, означающее что количество будет равно MAX_COLLISIONS
                 collision_overflow = 1;
-            #endif
+				
+			#endif
             }
-
-            strcpy(collisions[collision_counter++], current_line);
+			#if !defined (LAST_COLLISIONS) && !defined (MALLOC)
+			if (!collision_overflow)
+			#endif
+            strcpy(collisions[collision_counter++], current_word);
 
                 
             #ifdef STOP_ON_FIRST
@@ -109,8 +113,9 @@ int main(int argc, char **argv) {
         #ifndef MALLOC
         unsigned max_wanted_length; // Маскимальный размер слова при поиске коллизий,   задаётся аргументом main
         #endif
-        unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,    задаётся аргументом main
     #endif
+
+    unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,    задаётся аргументом main
 
     if (argc != 4 ) {
         printf("Format: \"MD5 Hash\" \"Alphabet\" \"Word lenght\" \n");
@@ -284,6 +289,8 @@ int main(int argc, char **argv) {
 
         printf("Execution times (in seconds) :\n");
         printf("alphabet length = %u, word length (WL) :\n", alphabet_length);
+        
+        #if defined(BENCHMARK_SEPARATE_LENGTHS) || defined(BENCHMARK_TOTAL_PERMS)  || defined(BENCHMARK_FIRST_COLLISION)
 
         unsigned curr_length;
         unsigned counter_start, counter;
@@ -292,6 +299,8 @@ int main(int argc, char **argv) {
         } else {
             counter_start = max_wanted_length - wanted_length;
         }
+
+        #endif
 
         #ifdef BENCHMARK_SEPARATE_LENGTHS
         counter = counter_start;
@@ -353,10 +362,12 @@ int main(int argc, char **argv) {
         #else
         printf("WL %3u-%-3u\t%.*lf\n", min_wanted_length, max_wanted_length, 6, time_sum);
         #endif
-    #endif
+
     printf("\nProgram finished after : ");
     
     printf("%.*lf sec.\n", 6, time_sum);
+
+    #endif
 
     #ifdef BENCHMARK_FIRST_COLLISION
 

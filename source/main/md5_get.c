@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 {
     char str[256] = {0};
     if (argc == 2)
-        snprintf(str, (strlen(argv[1]) > 255) ? 255 : strlen(argv[1]) + 1,"%s", argv[1]);
+        strncpy(str, (strlen(argv[1]) > 255) ? 255 : strlen(argv[1]) + 1, argv[1]);
     else{
         printf("Usage: %s <word>(char[])\n", argv[0]);
         return 1;

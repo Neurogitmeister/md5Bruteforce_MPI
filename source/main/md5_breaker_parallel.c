@@ -30,6 +30,8 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
     unsigned char collision_counter    0 - 2^8-1
     unsigned int wanted_length         0 - 2^32-1
     unsigned int alphabet_length       0 - 2^32-1
+	unsigned char leaf_reached		   0 - 255
+	unsigned char curr_len			   0 - 255
     unsigned char md5_wanted[MD5_DIGEST_LENGTH];
     --------------------------------------------------------------------------------
     |  defined(MALLOC)                |  !defined(MALLOC)                          |
@@ -53,72 +55,68 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
 
     (здесь "ppn (processes per node)" - числов процессов на 1 узле; в максимуме равно числу ядер)
 
- Место для глобальных переменных в памяти на 1 узле :
+	Место для одиночных глобальных переменных в памяти на 1 узле :
 
         (sizeof(type1)[Байт] * N1 + sizeof(type2)[Байт] * N2 + ... )
 
-        8*2 + 1 + 4*1 + 1*(alphabet_length || ALPH_SIZE) + 4 * (max_wanted_length || LINE_SIZE)) * ppn + 8 * (max_wanted_length || LINE_SIZE) =
+        8*2 + 1 + 4*2 + 2*1 + 1*(alphabet_length || ALPH_SIZE) + 4 * (max_wanted_length || LINE_SIZE)) * ppn + 8 * (max_wanted_length || LINE_SIZE) =
 
         defined(MALLOC):
 
-        (heap) = 21 + alphabet_length + (4 * ppn + 8) * max_wanted_length [Байт] 
-        min(1) (8 ядер)  = 21 + 1 + (4 * 8 + 8)  * 1 = 62 [Байт]
-        min(1) (64 ядер) = 21 + 1 + (4 * 64 + 8) * 1 = 283 [Байт]
-        mid(255) (8 ядер)  = 21 + 255 + (4 * 8 + 8)  * 255 = 10476 [Байт] = 10,23 [КБайт]
-        mid(255) (64 ядер) = 21 + 255 + (4 * 64 + 8) * 255 = 67596 [Байт] = 66,01 [КБайт]
-        max(2^32-1) (8 ядер)  = 21 + 4 294 967 295 + (4 * 8 + 8)  * 4 294 967 295 = 164 [ГБайт]
-        max(2^32-1) (64 ядер) = 21 + 4 294 967 295 + (4 * 64 + 8) * 4 294 967 295 = 1060 [ГБайт]
+        (heap) = 26 + alphabet_length + (4 * ppn + 8) * max_wanted_length [Байт] 
+        min(1) (8 ядер)  = 26 + 1 + (4 * 8 + 8)  * 1 = 67 [Байт]
+        min(1) (64 ядер) = 26 + 1 + (4 * 64 + 8) * 1 = 288 [Байт]
+        mid(255) (8 ядер)  = 26 + 255 + (4 * 8 + 8)  * 255 = 10481 [Байт] = 10,24 [КБайт]
+        mid(255) (64 ядер) = 26 + 255 + (4 * 64 + 8) * 255 = 67601 [Байт] = 66,02 [КБайт]
+        max(2^32-1) (8 ядер)  = 26 + 4 294 967 295 + (4 * 8 + 8)  * 4 294 967 295 = 164 [ГБайт]
+        max(2^32-1) (64 ядер) = 26 + 4 294 967 295 + (4 * 64 + 8) * 4 294 967 295 = 1060 [ГБайт]
 
         !defined(MALLOC):
 
-        (stack)  = 21 + 100 + 200 * ppn + 400 = 521 + 200 * ppn [Байт]
-        (64 ядра) = 13221 [Байт] = 12,91 [КБайт],
-        (8 ядер)  = 2121 [Байт]  = 2,07 [КБайт]
+        (stack)  = 26 + 100 + 200 * ppn + 400 = 521 + 200 * ppn [Байт]
+        (64 ядра) = 13226 [Байт] = 12,92 [КБайт],
+        (8 ядер)  = 2126 [Байт]  = 2,08 [КБайт]
 
- Передаёт рекурсивно в следующие итерации :
+	Место для локальных переменных в памяти на 1 узле:
 
-    unsigned char  
-        leaf_reached - флаг достижения первого слова для процесса
-        curr_len     - текущая длина составленной функцией строки
-    (при первом вызове curr_len и leaf_reached должны быть равны 0)
+		unsigned int i, lb;
 
- Место для локальных переменных в памяти на 1 узле:
+		!!! одновременное существование двух или нескоьких вызовов функции на одной глубине дерева
+		!!! (в одном for цикле) в одном процессе не возможно, поэтому кол-во рекурсивно создаваемых
+		!!! в памяти переменных ограничится максимальной высотой дерева т.е. максимальной длиной слова
 
-        !!! одновременное существование двух или нескоьких вызовов функции на одной глубине дерева
-        !!! (в одном for цикле) в одном процессе не возможно, поэтому кол-во рекурсивно создаваемых
-        !!! в памяти переменных ограничится максимальной высотой дерева т.е. максимальной длиной слова
+        (4 + 4) * max_wanted_length * ppn ; Совершается alphabet_length^max_wanted_length перестановок
 
-        (1 + 1) * max_wanted_length * ppn ;
+        min(1) : 8 * ppn [Байт]
+        (8 ядер)  = 64 [Байт]
+        (64 ядер) = 512 [Байт]
 
-        min(1) : 2 * ppn [Байт]
-        (8 ядер)  = 16 [Байт]
-        (64 ядер) = 128 [Байт]
+        mid(255) : 8 * max_wanted_length * ppn = 8 * 255 * ppn [Байт]
+        (8 ядер)  = 16320 [Байт] = 15,63 [КБайт]
+        (64 ядра) = 130560 [Байт] = 127,5 [КБайт]
 
-        mid(255) : 2 * max_wanted_length * ppn = 2 * 255 * ppn [Байт]
-        (8 ядер)  = 4080 [Байт]  = 3,98 [КБайт]
-        (64 ядра) = 32640 [Байт] = 31,87 [КБайт]
-
-        max(2^32-1) : 2 * max_wanted_length * ppn = 2 * 4 294 967 295 * ppn [Байт]
-        (8 ядер)  = 4080 [Байт]  = 64 [ГБайт]
-        (64 ядра) = 32640 [Байт] = 512 [ГБайт]
-    
+        max(2^32-1) : 8 * max_wanted_length * ppn = 2 * 4 294 967 295 * ppn [Байт]
+        (8 ядер)  = 256 [ГБайт]
+        (64 ядра) = 2048 [ГБайт]
 */
 
+	unsigned short i;
 
     if (curr_len != wanted_length) {
         // Часть, задающая буквы для текущей глубины curr_len, растущей с 0 до wanted_length в каждом рекурсивном вызове
-        unsigned short i, lb; // Переменные индексов циклов for
+        unsigned short lb; // Переменные индексов циклов for
 
         /* Пересчитанный под количество итераций на глубине curr_len дробный chunk,
         домножаемый на rank для получения индекса в текущем множестве итераций,
         чтобы затем определить по нему индекс в цикле for от 0 до alphabet_length - 1;*/
-        double chunk_resize; 
         
         if (leaf_reached)
             lb = 0;
         else {
-            chunk_resize = chunk / pow(alphabet_length,  wanted_length - curr_len - 1);
-            lb = (unsigned)(rank * chunk_resize) % alphabet_length;
+		//Порядок:    3			2								1														4
+		//		 | округле- | смеще- | подсчёт дробного нижнего индекса в пересчёте на текущую глубину   | опредение индекса буквы в алфавите
+		//		 |   ние	|  ние	 | дерева итераций ( (perms_wanted / perms_current) / commsize)		 | в текущей ветви вариантов for
+            lb =  (unsigned)(rank * ( (double)chunk / pow(alphabet_length, wanted_length - curr_len - 1)) ) % alphabet_length;
         }
 
        
@@ -137,37 +135,35 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
             }
             #endif
         }
-
+		// curr_len -= 1;
         return leaf_reached;
 
     } else {
 
         perm_running++; //счетчик перебранных вариантов
 
-        char current_line[wanted_length + 1];
-        unsigned char current_key[MD5_DIGEST_LENGTH];
-
         //Заполнение текущей строки
-        unsigned short i;
-        for (i = 0; i < wanted_length; i++) {
-            current_line[i] = alphabet[CLI[i]];
-        }
-        current_line[i] = '\0';
+		for (i = 0; i < wanted_length - 1; i++) {
+			if (current_word[i] != alphabet[CLI[i]])
+				current_word[i] = alphabet[CLI[i]];
+		}
+		current_word[i] = alphabet[CLI[i]];
+		current_word[++i] = '\0';
 
         #ifndef BENCHMARK
         // Вывод первого и последнего вариантов слова одного или нескольких процессов на экран, если не используются замеры производительности
             if ((perm_running == 1 || perm_running == chunk)) {
                 if (rank == wanted_rank) {
-                    printf("rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_line, perm_running);
+                    printf("rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_word, perm_running);
                 } else if (wanted_rank == -1) {
-                    printf("rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_line, perm_running);
+                    printf("rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_word, perm_running);
                 }
             }
         #endif
 
         // Хэширование новой строки символов
-        MD5((const unsigned char *) current_line,
-            strlen(current_line),
+        MD5((const unsigned char *) current_word,
+            strlen(current_word),
             (current_key)
         );
 
@@ -186,10 +182,10 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
                 if (wanted_rank < commsize) {
                     printf("\n");
                     PrintTime(collision_time_stamp - global_time_start);
-                    printf(" rank = %-4d, perm = %llu / %llu , collision with \"%s\"\n\n", rank, perm_running, chunk, current_line);
+                    printf(" rank = %-4d, perm = %llu / %llu , collision with \"%s\"\n\n", rank, perm_running, chunk, current_word);
                 } else {
                     PrintTime(collision_time_stamp - global_time_start);
-                    printf(" rank = %-4d, perm = %llu / %llu , Collision with \"%s\"\n",   rank, perm_running, chunk, current_line);
+                    printf(" rank = %-4d, perm = %llu / %llu , Collision with \"%s\"\n",   rank, perm_running, chunk, current_word);
                 }
                 
             }
@@ -215,14 +211,18 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
                 }
 
             #else
+				#ifdef LAST_COLLISIONS
                 // Обнуление счётчика для перезаписи первых добавленных коллизий
                 collision_counter = 0;
+				#endif
                 // Оповещение о переполнение массива, означающее что количество будет равно MAX_COLLISIONS
                 collision_overflow = 1;
             #endif
             }
-
-            strcpy(collisions[collision_counter++], current_line);
+			#if !defined (LAST_COLLISIONS) && !defined (MALLOC)
+			if (!collision_overflow)
+			#endif
+            strcpy(collisions[collision_counter++], current_word);
 
         }
 
@@ -239,16 +239,18 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
             }
         #endif
 
+        return 1;
+        // Отправляет в leaf_reached предыдущего вызова функции 1,
+        // оповещая о достижении листа дерева итераций (нахождении первого слова требуемой длины)
     }
-    return 1; // Отправляет в leaf_reached предыдущего вызова функции 1,
-    // оповещая о достижении листа дерева итераций (нахождении первого слова требуемой длины)
 }
 
 // Проверка слова с конца списка на коллизию хэша по порядковому номеру с нулевого.
 // Выполняется по одному разу на процесс, поэтому не требует оптимизации по нескольким переборам
 // Перебор Всего perms_curr % commsize раз.
 
-/* Использует глобальные значения :
+/*
+	Использует глобальные значения :
     unsigned alphabet_length
     unsigned wanted_length
     unsigned char md5wanted[MD5_DIGEST_LENGTH]
@@ -262,35 +264,34 @@ void check_remainder(int num) {
         unsigned rank = num;
     #endif
 
-    char current_line[wanted_length + 1];
-    current_line[wanted_length] = '\0';
+    current_word[wanted_length] = '\0';
 
     unsigned i = wanted_length - 1;
     do
     {
-        current_line[i] = alphabet[alphabet_length - 1 - num % alphabet_length];
+        current_word[i] = alphabet[alphabet_length - 1 - num % alphabet_length];
         num /= alphabet_length;
         i--;
     } while (num > 0);
 
     i++;
     for (int j = 0; j < i; j++) {
-        current_line[j] = alphabet[alphabet_length - 1];
+        current_word[j] = alphabet[alphabet_length - 1];
     }
 
     #ifndef BENCHMARK   
         if (rank == wanted_rank) {
-            printf("rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_line, perm_running);
+            printf("rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_word, perm_running);
         } else if (wanted_rank < 0) {
-            printf("rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_line, perm_running);
+            printf("rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_word, perm_running);
         }
     #endif
 
     unsigned char current_key[MD5_DIGEST_LENGTH];
 
     // Хэширование новой строки символов
-    MD5((const unsigned char *) current_line,
-        strlen(current_line),
+    MD5((const unsigned char *) current_word,
+        strlen(current_word),
         (current_key)
     );
 
@@ -299,7 +300,7 @@ void check_remainder(int num) {
         // Если коллизия, просто выводим её на экран:
 
         #ifndef BENCHMARK
-            printf("Collision with \"%s\", rank = %4d, perm = %llu / %llu\n", current_line, rank, perm_running, chunk);
+            printf("Collision with \"%s\", rank = %4d, perm = %llu / %llu\n", current_word, rank, perm_running, chunk);
         #else
             // Замер времени нахождения первой коллизии
             if (collision_found == 0) {
@@ -325,7 +326,7 @@ void check_remainder(int num) {
         #endif
         }
 
-        strcpy(collisions[collision_counter++], current_line);
+        strcpy(collisions[collision_counter++], current_word);
 
         // Поднятие флага после найденой коллизии
         collision_found = 1;
@@ -368,8 +369,11 @@ int main(int argc, char **argv) {
         #ifndef MALLOC
         unsigned max_wanted_length; // Маскимальный размер слова при поиске коллизий,   задаётся аргументом main
         #endif
-        unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,    задаётся аргументом main
+
     #endif
+
+    unsigned min_wanted_length; // Минимальный размер слова при поиске коллизий,    задаётся аргументом main
+
 
     // Обработка входных аргументов в нулевом процессе по стандарту MPI
     if (rank == root) {
@@ -490,10 +494,12 @@ int main(int argc, char **argv) {
 
     #ifdef MALLOC
 
+		current_word = malloc(sizeof(char) * max_wanted_length);
         CLI = malloc(sizeof(unsigned) * max_wanted_length);
         collisions = malloc(sizeof(char*) * MAX_COLLISIONS);
         for (int i = 0; i < MAX_COLLISIONS; i++)
             collisions[i] = (char*)malloc(sizeof(char) * (max_wanted_length + 1));
+
     #endif
 
     /*
@@ -802,6 +808,10 @@ int main(int argc, char **argv) {
         }
 
     }
+    #else
+        if (rank == root){
+            printf("Processes = %d, alphabet length = %u, word lengths %d-%d\n", commsize, alphabet_length, min_wanted_length, max_wanted_length );
+        }
     #endif
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -835,7 +845,7 @@ int main(int argc, char **argv) {
         MPI_Barrier(MPI_COMM_WORLD);
 
         #ifdef TIME_CHECK
-
+            if (rank == root) printf("\n");
             MPI_Barrier(MPI_COMM_WORLD);
             char* msg = malloc(sizeof(char)*100);
             if (rank > FIRST_RANK_TO_CHECK && rank < FIRST_RANK_TO_CHECK + N_CHECK) {
@@ -845,6 +855,7 @@ int main(int argc, char **argv) {
 
         #endif
 
+        #if defined(BENCHMARK_SEPARATE_LENGTHS) || defined(BENCHMARK_TOTAL_PERMS)  || defined(BENCHMARK_FIRST_COLLISION)
 
         unsigned curr_length;
         unsigned counter_start, counter;
@@ -853,15 +864,15 @@ int main(int argc, char **argv) {
         } else {
             counter_start = max_wanted_length - wanted_length;
         }
-
-
+        
         MPI_Barrier(MPI_COMM_WORLD);
         if (rank == root){
-            printf("Execution times statistics (in seconds)\n");
+            printf("\nExecution times statistics (in seconds)\n");
             printf("processes = %d, alphabet length = %u, for word lengths (WL) :\n", commsize, alphabet_length);
             printf("\t\tmin\t\tmax\t\tmean\n");
         }
-        
+
+        #endif
 
         #ifdef BENCHMARK_SEPARATE_LENGTHS
         counter = counter_start;
@@ -972,19 +983,6 @@ int main(int argc, char **argv) {
         }
         #endif
 
-        #else
-        reduced_time = time_sum;
-        MPI_Allreduce(&reduced_time, &time_min, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-        MPI_Allreduce(&reduced_time, &time_avg, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&reduced_time, &time_max, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
-        if (rank == root) {
-            printf("WL %3u-%-3u", min_wanted_length, max_wanted_length);
-            printf("\t%.*lf", 6, time_min);
-            printf("\t%.*lf", 6, time_max);
-            time_avg /= commsize;
-            printf("\t%.*lf\n", 6, time_avg);
-        }
         #endif
         if (rank == root) {
             printf("\nProgram finished after (seconds)\n");

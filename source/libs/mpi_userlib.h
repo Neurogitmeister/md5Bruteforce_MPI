@@ -41,7 +41,7 @@ void MPI_Print_in_rank_order_unique(int commsize, int rank, char* message) {
 	MPI_Ssend(NULL, 0, MPI_CHAR, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
 
 	if(rank == commsize - 1) {
-		printf("%-4d : %s\n\n", rank, message);
+		printf("%-4d : %s\n", rank, message);
         fflush(stdout);
     }
     free(prev_message);

@@ -5,8 +5,7 @@
 double Wtime(){
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-
-	return tv.tv_sec + (double)tv.tv_usec / 1000000;
+	return (double)tv.tv_sec + (double)tv.tv_usec * 1E-6;
 }
 
 void PrintTime(double seconds) {
