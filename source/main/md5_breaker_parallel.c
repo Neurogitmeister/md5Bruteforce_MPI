@@ -449,7 +449,7 @@ int main(int argc, char **argv) {
 
     // Вывод информации перед запуском:
     // Здесь выводятся входные параметры и предсказывается количество пермутаций для каждой итерации главного цикла по длине слов и по процессам
-    #ifndef JUST_DO_IT
+    
     if (rank == root) {
 
         printf("Alphabet[%u] : %s | Word length: %u-%u | N processes = %d\n", 
@@ -458,6 +458,9 @@ int main(int argc, char **argv) {
         printf("md5 to bruteforce: ");
         md5_print(md5_wanted);
         printf("\n\n");
+
+        #ifndef ONLY_BENCHMARK_INFO
+
         print_perms_info(alphabet_length, min_wanted_length, max_wanted_length, commsize);
         unsigned long long geometric;
         if ( (geometric = geometric_series_sum(alphabet_length,min_wanted_length, max_wanted_length)) == 0 )
@@ -475,8 +478,10 @@ int main(int argc, char **argv) {
         #ifndef BENCHMARK
             printf("\nCollisions :\n\n");
         #endif
+
+        #endif
     }
-    #endif
+   
 
     //  Переключение на обратный ход внешнего цикла while :
     if (max_wanted_length < min_wanted_length) {
@@ -646,7 +651,6 @@ int main(int argc, char **argv) {
         } else {
 
             // Приступить к передаче
-            if (rank == root) printf("sending collisions to root...\n");
 
             unsigned char* counts = (unsigned char *)malloc(commsize*sizeof(unsigned char));
             int* recvcounts = (int *)malloc(commsize*sizeof(int));
@@ -761,7 +765,22 @@ int main(int argc, char **argv) {
     *
     */
 
-    #ifndef JUST_DO_IT
+    #ifdef ONLY_BENCHMARK_INFO
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (collision_counter_reduce) {
+
+        if (rank == root) {
+            printf("%d collision(s) found\n", collision_counter_reduce);
+            if (collision_counter == 0)
+                printf("collisions have been sent to root\n");
+        }
+    } else
+        if (rank == root)
+            printf("no collisions found\n");
+
+    #else
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -808,14 +827,12 @@ int main(int argc, char **argv) {
         }
 
     }
-    #else
-        if (rank == root){
-            printf("Processes = %d, alphabet length = %u, word lengths %d-%d\n", commsize, alphabet_length, min_wanted_length, max_wanted_length );
-        }
+
     #endif
 
     MPI_Barrier(MPI_COMM_WORLD);
     fflush(stdout);
+
     if (rank == 0) {
         printf("\nPermutations executed:\n");
     }
