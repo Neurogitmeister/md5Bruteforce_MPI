@@ -385,13 +385,30 @@ int main(int argc, char **argv) {
             } else {
                 int err_code = parse_arg_to_unsigned(argv[4],'-',(unsigned*)&first_rank_of_perms_range, (unsigned*)&last_rank_of_perms_range);
                 if (err_code == 1) {
-                    if(argv[4][0] == '-') 
-                        sscanf(argv[4], "%d", &first_rank_of_perms_range);
-                    else if (err_code != 0) {
-                        printf("Error! Invalid output ranks argument!\n");
-                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    if(argv[4][0] == '-') {
+                        char temp[32];
+                        int i = 1;
+                        while(isdigit(argv[4][i])) {
+                            temp[i-1] = argv[4][i];
+                            i++;
+                        }
+                        if (argv[4][i] == '\0') {
+                            err_code = 0;
+                            first_rank_of_perms_range = -1 * atoi(temp);
+                            if (first_rank_of_perms_range == -1) {
+                                first_rank_of_perms_range = 0;
+                                last_rank_of_perms_range = commsize - 1;
+                            }
+                            else
+                                last_rank_of_perms_range = first_rank_of_perms_range;
+                        }
                     }
                 }
+                if (err_code != 0) {
+                    printf("ERROR! Invalid output ranks argument!\n");
+                    MPI_Abort(MPI_COMM_WORLD, 1);
+                }
+                
                 if (first_rank_of_perms_range > last_rank_of_perms_range) {
                     int temp = first_rank_of_perms_range;
                     first_rank_of_perms_range = last_rank_of_perms_range;
