@@ -149,11 +149,16 @@ int main(int argc, char **argv) {
     
 
     printf("Alphabet[%d] : %s | Word length: %d-%d\n", 
-    alphabet_length, argv[2], min_wanted_length, max_wanted_length);
+        alphabet_length, argv[2], min_wanted_length, max_wanted_length);
     printf("full alphabet : %s\n", alphabet);
     printf("md5 to bruteforce: ");
     md5_print(md5_wanted);
     printf("\n\n");
+
+    #ifdef STOP_ON_FIRST
+        printf("USING \"STOP_ON_FIRST\"\n\n");
+    #endif
+
     print_perms_info(alphabet_length,min_wanted_length,max_wanted_length,1);
     unsigned long long geometric;
     if ( (geometric = geometric_series_sum(alphabet_length,min_wanted_length, max_wanted_length)) == 0 )
@@ -161,14 +166,8 @@ int main(int argc, char **argv) {
     printf("\n\tGeometric progression sum : %llu\n", geometric);
 
 
-    #ifdef STOP_ON_FIRST
-        printf("\nUSING \"STOP_ON_FIRST\"\n", SYNC_CONST);
-        #ifndef BENCHMARK
-            printf("\n--------------------------------\n");
-        #endif
-    #endif
-
     #ifndef BENCHMARK
+        printf("\n-------------------------------------------\n");
         printf("\nCollisions :\n\n");
     #endif
 
@@ -187,6 +186,7 @@ int main(int argc, char **argv) {
     }
 
     #ifdef MALLOC
+        current_word = malloc(sizeof(char) * max_wanted_length);
         collisions = malloc(sizeof(char*) * MAX_COLLISIONS + sizeof(char)*(max_wanted_length+1));
         for(int i = 0; i < MAX_COLLISIONS; i++)
             collisions[i] = (char*)malloc(sizeof(char) * (max_wanted_length + 1));
@@ -209,17 +209,16 @@ int main(int argc, char **argv) {
         double first_collision_time = 0.0, first_collision_time_sum = 0.0;  // Переменная времени нахождения первой коллизии
         unsigned char first_collision_measured = 0;
         double time_single_end;
-        global_time_start = Wtime();
     #endif
-
+    
     perm_running = 0; // Загружаем в кэш процессора
+    global_time_start = Wtime();
 
     do {
 
     #ifdef BENCHMARK
 
         time_single = Wtime();
-        
         recursive_permutations(0);
 
         #ifdef BENCHMARK_FIRST_COLLISION
@@ -255,7 +254,7 @@ int main(int argc, char **argv) {
     }
     // Использование доп. условия на выход из цикла для случая синхронизации
     #ifdef STOP_ON_FIRST
-        while ((wanted_length <= max_wanted_length && wanted_length >= min_wanted_length) && !collision_counter_reduce);
+        while ((wanted_length <= max_wanted_length && wanted_length >= min_wanted_length) && !collision_counter);
 
     #else
         while (wanted_length <= max_wanted_length && wanted_length >= min_wanted_length);
@@ -290,7 +289,7 @@ int main(int argc, char **argv) {
         printf("Execution times (in seconds) :\n");
         printf("alphabet length = %u, word length (WL) :\n", alphabet_length);
         
-        #if defined(BENCHMARK_SEPARATE_LENGTHS) || defined(BENCHMARK_TOTAL_PERMS)  || defined(BENCHMARK_FIRST_COLLISION)
+        #if defined(BENCHMARK_SEPARATE_LENGTHS) || defined(BENCHMARK_TOTAL_PERMS)
 
         unsigned curr_length;
         unsigned counter_start, counter;

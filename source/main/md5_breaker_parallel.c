@@ -25,6 +25,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
  Использует глобальные переменные:
 
     int rank
+    int commsize
     unsigned long long chunk           0 - 2^64-1
     unsigned long long perm_running    0 - 2^64-1
     unsigned char collision_counter    0 - 2^8-1
@@ -42,9 +43,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
     --------------------------------------------------------------------------------
     |   !defined(BENCHMARK)                                                   |
     |-------------------------------------------------------------------------|
-    | int commsize,                                                           |
-    | unsigned max_wanted_length,                                             |
-    | unsigned min_wanted_length ***                                          |
+    | unsigned max_wanted_length ***                                          |
     | *** Версия с выводом на экран крайних элементов потоков использует      |
     | обращение к этим переменным при нахождении коллизии, что происходит     |
     | редко, следовательно ими можем принебречь в расчётах (12 Байт)          |
@@ -59,7 +58,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
 
         (sizeof(type1)[Байт] * N1 + sizeof(type2)[Байт] * N2 + ... )
 
-        8*2 + 1 + 4*2 + 2*1 + 1*(alphabet_length || ALPH_SIZE) + 4 * (max_wanted_length || LINE_SIZE)) * ppn + 8 * (max_wanted_length || LINE_SIZE) =
+        8*2 + 1 + 4*2 + 1*2 + 1*(alphabet_length || ALPH_SIZE) + 4 * (max_wanted_length || LINE_SIZE)) * ppn + 8 * (max_wanted_length || LINE_SIZE) =
 
         defined(MALLOC):
 
@@ -153,10 +152,10 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
         #ifndef BENCHMARK
         // Вывод первого и последнего вариантов слова одного или нескольких процессов на экран, если не используются замеры производительности
             if ((perm_running == 1 || perm_running == chunk)) {
-                if (rank == wanted_rank) {
-                    printf("rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_word, perm_running);
-                } else if (wanted_rank == -1) {
-                    printf("rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_word, perm_running);
+                if (rank >= first_rank_of_perms_range && rank <= last_rank_of_perms_range) {
+                    fprintf(fd,"rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_word, perm_running);
+                } else if (first_rank_of_perms_range == -1) {
+                    fprintf(fd,"rank %4d, pwd = %*s, perm = %llu\n", rank, max_wanted_length, current_word, perm_running);
                 }
             }
         #endif
@@ -179,7 +178,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
                     collision_time_stamp = MPI_Wtime();
                     collision_found = 1;
                 }
-                if (wanted_rank < commsize) {
+                if (rank >= first_rank_of_perms_range && rank <= last_rank_of_perms_range) {
                     printf("\n");
                     PrintTime(collision_time_stamp - global_time_start);
                     printf(" rank = %-4d, perm = %llu / %llu , collision with \"%s\"\n\n", rank, perm_running, chunk, current_word);
@@ -280,10 +279,10 @@ void check_remainder(int num) {
     }
 
     #ifndef BENCHMARK   
-        if (rank == wanted_rank) {
-            printf("rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_word, perm_running);
-        } else if (wanted_rank < 0) {
-            printf("rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_word, perm_running);
+        if (rank >= first_rank_of_perms_range && rank <= last_rank_of_perms_range) {
+            fprintf(fd,"rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_word, perm_running);
+        } else if (first_rank_of_perms_range == -1) {
+            fprintf(fd,"rank %4d, pwd = %*s, perm = %llu <== remainder\n", rank, max_wanted_length, current_word, perm_running);
         }
     #endif
 
@@ -379,15 +378,30 @@ int main(int argc, char **argv) {
     if (rank == root) {
         #ifndef BENCHMARK
             if (argc > 5 || argc < 4) {
-                printf("Format: \"MD5 Hash\" \"Alphabet\" \"Word lenght\" \"Output Rank with number N (negative to output all; none to disable)\"\n");
+                printf("Format: \"MD5 Hash\" \"Alphabet\" \"Word lenghts\" \"Output ranks (negative to output all; none to disable)\"\n");
                 MPI_Abort(MPI_COMM_WORLD, 1);
             } else if (argc == 4) {
-                wanted_rank = ~(1 << 31);
-            } else wanted_rank = strtol(argv[4], NULL, 10); //atoi(argv[4]);
+                first_rank_of_perms_range = ~(1 << 31);
+            } else {
+                int err_code = parse_arg_to_unsigned(argv[4],'-',(unsigned*)&first_rank_of_perms_range, (unsigned*)&last_rank_of_perms_range);
+                if (err_code == 1) {
+                    if(argv[4][0] == '-') 
+                        sscanf(argv[4], "%d", &first_rank_of_perms_range);
+                    else if (err_code != 0) {
+                        printf("Error! Invalid output ranks argument!\n");
+                        MPI_Abort(MPI_COMM_WORLD, 1);
+                    }
+                }
+                if (first_rank_of_perms_range > last_rank_of_perms_range) {
+                    int temp = first_rank_of_perms_range;
+                    first_rank_of_perms_range = last_rank_of_perms_range;
+                    last_rank_of_perms_range = temp;
+                }
+            }
     
         #else
             if (argc != 4 ) {
-                printf("Format: \"MD5 Hash\" \"Alphabet\" \"Word lenght\" \n");
+                printf("Format: \"MD5 Hash\" \"Alphabet\" \"Word lenghts\" \n");
                 MPI_Abort(MPI_COMM_WORLD, 1);
             }
         #endif
@@ -443,39 +457,44 @@ int main(int argc, char **argv) {
 
     
     #ifndef BENCHMARK
-        MPI_Bcast(&wanted_rank, 1, MPI_INT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&first_rank_of_perms_range, 1, MPI_INT, root, MPI_COMM_WORLD);
+        MPI_Bcast(&last_rank_of_perms_range, 1, MPI_INT, root, MPI_COMM_WORLD);
+        if (rank >= first_rank_of_perms_range && rank <= last_rank_of_perms_range) {
+            char name[100];
+            sprintf((char*)name,"%s%d.txt", "output/Words of rank ",rank);
+            fd = fopen(name, "w");
+        }
     #endif
 
 
     // Вывод информации перед запуском:
-    // Здесь выводятся входные параметры и предсказывается количество пермутаций для каждой итерации главного цикла по длине слов и по процессам
+    // Здесь выводятся входные параметры и предсказывается количество пермутаций для каждой итерации главного цикла по длине алфавита, слов и по процессам
     
     if (rank == root) {
 
         printf("Alphabet[%u] : %s | Word length: %u-%u | N processes = %d\n", 
-        alphabet_length, argv[2], min_wanted_length, max_wanted_length, commsize);
+            alphabet_length, argv[2], min_wanted_length, max_wanted_length, commsize);
         printf("full alphabet : %s\n", alphabet);
         printf("md5 to bruteforce: ");
         md5_print(md5_wanted);
         printf("\n\n");
 
-        #ifndef ONLY_BENCHMARK_INFO
-
-        print_perms_info(alphabet_length, min_wanted_length, max_wanted_length, commsize);
-        unsigned long long geometric;
-        if ( (geometric = geometric_series_sum(alphabet_length,min_wanted_length, max_wanted_length)) == 0 )
-            geometric = geometric_series_sum(alphabet_length,max_wanted_length, min_wanted_length);
-        printf("\n\tGeometric progression sum : %llu\n", geometric);
-
-
         #ifdef STOP_ON_FIRST
-            printf("\nUSING \"STOP_ON_FIRST\" (each %d permutations)\n", SYNC_CONST);
-            #ifndef BENCHMARK_SEPARATE_LENGTHS
-                printf("\n--------------------------------\n");
-            #endif
+            printf("USING \"STOP_ON_FIRST\" (each %d permutations)\n", SYNC_CONST);
         #endif
 
+        #ifndef ONLY_BENCHMARK_INFO
+        printf("\n");
+        print_perms_info(alphabet_length, min_wanted_length, max_wanted_length, commsize);
+        unsigned long long geometric;
+        // Вывод проверки кол-ва пермутаций, подсчитанных в предыдущей функции, при помощи суммы геометрической прогрессии.
+        // Обратный диапазон длин, поданный в функцию суммы, возвращает из функции 0 и вызывает подсчёт в прямом порядке.
+        if ( (geometric = geometric_series_sum(alphabet_length, min_wanted_length, max_wanted_length)) == 0 )
+            geometric = geometric_series_sum(alphabet_length, max_wanted_length, min_wanted_length);
+        printf("\n\tGeometric progression sum : %llu\n", geometric);
+
         #ifndef BENCHMARK
+            printf("\n-------------------------------------------\n");
             printf("\nCollisions :\n\n");
         #endif
 
@@ -544,8 +563,10 @@ int main(int argc, char **argv) {
         double first_collision_time = 0.0, first_collision_time_sum = 0.0;  // Переменная времени нахождения первой коллизии
         unsigned char first_collision_measured = 0;
         double time_single_end;
-        global_time_start = MPI_Wtime();
     #endif
+    
+    perm_running = 0; // Загружаем в кэш процессора
+    global_time_start = MPI_Wtime();
 
     do {
 
@@ -627,6 +648,9 @@ int main(int argc, char **argv) {
 
     #ifdef BENCHMARK
     double time_gather = MPI_Wtime(); // Переменная замера времени до завершения обхода дерева всеми процессами
+    #else
+    if (rank >= first_rank_of_perms_range && rank <= last_rank_of_perms_range)
+        fclose(fd);
     #endif
 
     // Определение общего числа коллизий из всех процессов в collision_counter_reduce
@@ -647,7 +671,11 @@ int main(int argc, char **argv) {
         }
         MPI_Bcast(&initiate_exchange, 1, MPI_UNSIGNED_CHAR, root, MPI_COMM_WORLD);
         if (initiate_exchange == 0) {
+            #ifdef MALLOC 
             result_collisions_array = collisions;
+            #else
+            result_collisions_array = (char**)collisions;
+            #endif
         } else {
 
             // Приступить к передаче
@@ -772,13 +800,13 @@ int main(int argc, char **argv) {
     if (collision_counter_reduce) {
 
         if (rank == root) {
-            printf("%d collision(s) found\n", collision_counter_reduce);
+            printf("\n%d collision(s) found\n", collision_counter_reduce);
             if (collision_counter == 0)
                 printf("collisions have been sent to root\n");
         }
     } else
         if (rank == root)
-            printf("no collisions found\n");
+            printf("\nno collisions found\n");
 
     #else
 
@@ -865,14 +893,18 @@ int main(int argc, char **argv) {
             if (rank == root) printf("\n");
             MPI_Barrier(MPI_COMM_WORLD);
             char* msg = malloc(sizeof(char)*100);
-            if (rank > FIRST_RANK_TO_CHECK && rank < FIRST_RANK_TO_CHECK + N_CHECK) {
-                sprintf(msg,"Execution time on process %d: %lf\n", rank, time_sum);
+            if (rank >= FIRST_RANK_TO_CHECK && rank < FIRST_RANK_TO_CHECK + N_CHECK) {
+                sprintf(msg,"Execution time on process %d: %lf", rank, time_sum);
+                // printf("%s", msg);
+                MPI_Print_in_rank_order(FIRST_RANK_TO_CHECK,
+                    commsize-1,//FIRST_RANK_TO_CHECK + N_CHECK > commsize ? commsize - 1 : FIRST_RANK_TO_CHECK + N_CHECK,
+                    rank, msg);
             }
             free(msg);
-
+            MPI_Barrier(MPI_COMM_WORLD);
         #endif
 
-        #if defined(BENCHMARK_SEPARATE_LENGTHS) || defined(BENCHMARK_TOTAL_PERMS)  || defined(BENCHMARK_FIRST_COLLISION)
+        #if defined(BENCHMARK_SEPARATE_LENGTHS) || defined(BENCHMARK_TOTAL_PERMS)
 
         unsigned curr_length;
         unsigned counter_start, counter;
@@ -881,7 +913,7 @@ int main(int argc, char **argv) {
         } else {
             counter_start = max_wanted_length - wanted_length;
         }
-        
+
         MPI_Barrier(MPI_COMM_WORLD);
         if (rank == root){
             printf("\nExecution times statistics (in seconds)\n");

@@ -181,7 +181,14 @@ char parse_alphabet(
 }
 
 
-// Определение длин искомых строк из 3 аргумента. Минимальная длина искомой строки - число до разделителя, максимальная длина искомой строки - после.
+/* Определение длин искомых строк из 3 аргумента. Минимальная длина искомой строки - число до разделителя, максимальная длина искомой строки - после.
+    Возвращает:
+        0 - успех
+        1 - не числовые символы в первом аргументе
+       -1 - отрицательное число в первом аргументе
+        2 - не числовые символы во втором аргументе
+       -2 - отрицательное число во втором аргументе
+*/
 char parse_arg_to_unsigned(char* input, char delim, unsigned int *num_1, unsigned int *num_2) {
     char parse[256];
     int i = 0, j = 0;
@@ -192,7 +199,6 @@ char parse_arg_to_unsigned(char* input, char delim, unsigned int *num_1, unsigne
     }
     if(( input[i] == delim || input[i] == '\0') && i != 0) {
         parse[i] = '\0';
-        // printf("min %s\n", parse);
         *num_1 = atoi(parse);
     } else 
         return 1;
@@ -215,15 +221,9 @@ char parse_arg_to_unsigned(char* input, char delim, unsigned int *num_1, unsigne
 
         parse[j] = '\0';
 
-        // printf("max %s\n", parse);
         *num_2 = atoi(parse);
         if(*num_2 == 0) return -2;
-        // if (*num_2 < *num_1){
-
-        //     unsigned int temp = *num_2;
-        //     *num_2 = *num_1;
-        //     *num_1 = temp;
-        // }
+        
     }
     return 0;
 }

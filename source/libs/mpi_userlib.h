@@ -3,15 +3,11 @@
 #include <string.h>
 
 // Вывод в консоль сообщений процессов из commsize в порядке возрастания ранга
-void MPI_Print_in_rank_order(int commsize, int rank, char* message) {
+void MPI_Print_in_rank_order(int first_rank, int last_rank, int rank, char* message) {
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
-	MPI_Recv(NULL, 0, MPI_INT, (rank > 0) ? rank - 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	printf(message, NULL);
-	MPI_Ssend(NULL, 0, MPI_INT, rank != commsize - 1 ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
-	if(rank == commsize - 1)
-		printf("\n");
+	MPI_Recv(NULL, 0, MPI_INT, (rank > first_rank) ? rank - 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	printf("%s\n",message);
+	MPI_Ssend(NULL, 0, MPI_INT, rank != last_rank ? rank + 1 : MPI_PROC_NULL, 0, MPI_COMM_WORLD);
 }
 // Вывод неповторяющихся сообщений процессов из commsize в порядке возрастания с указанием дипазона рангов
 void MPI_Print_in_rank_order_unique(int commsize, int rank, char* message) {
