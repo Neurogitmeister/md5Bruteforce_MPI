@@ -9,7 +9,7 @@
 
 
 // Позволяет использовать динамическую память для массива индексов букв, массива алфавита и массива коллизий
-#define MALLOC
+// #define MALLOC
 
 
 
@@ -22,32 +22,32 @@
 
 // Вывод на экран времени нахождения первой коллизии
 
-// #define BENCHMARK_FIRST_COLLISION
+#define BENCHMARK_FIRST_COLLISION
 
 
 
 // Выводит статистики времен по каждой отдельной длине слова
 
-// #define BENCHMARK_SEPARATE_LENGTHS
+#define BENCHMARK_SEPARATE_LENGTHS
 
 
 
 // Вывод статистики по проверенным коллизиям с начальной длины до всех остальных 
 // (например для начальной длины 12 : 12-12, 12-13, 12-14, ... , и т.д.)
 
-// #define BENCHMARK_TOTAL_PERMS
+#define BENCHMARK_TOTAL_PERMS
 
 
 
 // Позволяет выводить на экран время выполнения рекурсивной функции первых N_CHECK c FIRST_RANK_TO_CHECK процессов
 
-// #define TIME_CHECK
+#define TIME_CHECK
 
 
 
 // Вывод на экран только полезной для характеристик производительности информации
 
-#define ONLY_BENCHMARK_INFO
+// #define ONLY_BENCHMARK_INFO
 
 // #define LOGFILE
 
@@ -79,9 +79,9 @@
 #define MAX_COLLISIONS 8
 
 
-// Мощность алфавита для перебора
-#define ALPH_SIZE 150
+// Максимальная мощность алфавита для перебора
+#define ALPH_SIZE 2
 
 
 // Максимальный размер обрабатываемого слова
-#define LINE_SIZE 50
+#define LINE_SIZE 20

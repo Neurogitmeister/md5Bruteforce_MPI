@@ -136,7 +136,7 @@ unsigned char recursive_permutations(unsigned curr_len, unsigned char leaf_reach
             #endif
 	    }
 	
-        return leaf_reached;
+        return 1;
 
     } else {
 
@@ -772,6 +772,7 @@ int main(int argc, char **argv) {
                         for (int j = 0; j < counts[i]; j++) {
                             MPI_Recv(result_collisions_array[collision_counter + j], max_wanted_length + 1, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                         }
+                        collision_counter += counts[i];
                     }
                 }
                 // printf("gathered result_collisions_array: ");

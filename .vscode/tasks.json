@@ -63,7 +63,7 @@
             "label": "Run - MPI",
             "type": "shell",
             "command": [
-                "mpiexec -np 2 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 a-l 5",
+                "mpiexec -np 4 ./bin/md5parallel 79ec16df80b57696a03bb364410061f3 ab 20",
                 "&& lscpu | grep 'МГц'"
             ],
             "problemMatcher": [
