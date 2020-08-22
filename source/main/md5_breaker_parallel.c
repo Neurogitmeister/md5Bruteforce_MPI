@@ -783,7 +783,7 @@ int main(int argc, char **argv) {
             } else {
                 // Отправка ряда коллизий процесса в массив коллизий корневого
                 for (int i = 0; i < collision_counter; i++) {
-                    MPI_Send(collisions[i], max_wanted_length + 1, MPI_CHAR, root, 0, MPI_COMM_WORLD);
+                    MPI_Rsend(collisions[i], max_wanted_length + 1, MPI_CHAR, root, 0, MPI_COMM_WORLD);
                 }
             }
             free(counts);
