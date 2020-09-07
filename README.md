@@ -5,12 +5,12 @@ providing cryptography hooks, or even just communicating technical details about
 
 ## About the project
 
-### Technoligy stack
+### Stack of technologies
 
  - _"C"_ language
  - _"MPI"_ language
  - **OpenSSL** - MD5 cryptographic function implementation
- - **MPICH** - compilation and runtime
+ - **OpenMPI** - MPI application compilation and runtime
 
 ### Main goal
 
@@ -24,12 +24,12 @@ Project **doesn't solve** any more problems: it **doesn't show** any MD5 specifi
 > _P.S._ The teacher didn't show much emotion during the program showcasing,
 but as soon as he listed through my coursework documentation the desired mark was given right away! X)
 
-> _P.P.S._ I think it was due to this being displayed as late as at the very day of exam :D :D :D (I wasn't the best student)
+> _P.P.S._ I think it was due to this coursework being presented as late as at the very day of exam :D :D :D (not my proudest moment)
 
-## Brief reference on main theory topics
+## Brief description of project's main concepts
 
 ### [MD5](https://en.wikipedia.org/wiki/MD5)
-The **MD5 _message-digest_** algorithm designed by Ronald Rivest in 1991 is a widely used hash function producing a **128-bit hash value**. 
+The **MD5 *message-digest*** algorithm designed by Ronald Rivest in 1991 is a widely used hash function producing a **128-bit hash value**. 
 Although MD5 was initially designed to be used as a cryptographic hash function, it has been found to **suffer from extensive vulnerabilities**. 
 
 It can still be used as a checksum to verify data integrity, but only against unintentional corruption.
@@ -48,9 +48,9 @@ Parallel computing with processes (unlike threads) focuses on computations in **
 
 The project includes code for _serial_ execution version as well as _parallel_ version for comparsion in execution time between the two.
 
-But it's not all there's to it - a whole bunch of user's specific _**compilation flags and variables**_ is included!
+But it's not all there's to it - a whole bunch of user's specific ***compilation flags and variables*** is included!
 
-Located in the file _**"/source/libs/compilation_info.h"**_ rests the most interesting project functionality:
+Located in the file ***"/source/libs/compilation_info.h"*** rests the most interesting project functionality:
 - Enable/disable _Greedy_ search algorythm (exit on first collision)
 - Set variables to control syncronisation for greedy algorythm (avoiding _"MPI_Abort()"_)
 - Enable dynamic array allocation (heap) instead of preset size static ones (stack) 
@@ -62,24 +62,31 @@ Located in the file _**"/source/libs/compilation_info.h"**_ rests the most inter
 
 The repository version of the _"compilation_info.h"_ is preset to include all the time benchmark and permutation statistics as well as dynamic array allocation. 
 
-_Parallel_ version needs to be compiled using _**"mpicc"**_ compiler. It is included in MPI libraries sush as _**"MPICH"**_ and _**"OpenMPI"**_ which are free.
+_Parallel_ version needs to be compiled using ***"mpicc"*** compiler. It is included in MPI libraries sush as ***"MPICH"*** and ***"OpenMPI"*** which are free.
 
 _Serial_ version can be compiled by any C/C++ compiler that has access to _"math"_ and _"openssl"_ libraries.
 
-_**OpenSSL**_ is a free cryptographic library used in this project, but it is not present at default in many operating systems and needs to be installed manually.
+***OpenSSL*** is a free cryptographic library used in this project, but it is not present dy default in many operating systems and needs to be installed manually.
 
 ## Installing compilation dependancies:
 
 ### On UNIX-like systems:
 
-**Install both OpenSSL and MPICH using apt-get (requires root permissions):**
+**Install OpenSSL and OpenMPI development libraries using apt-get (requires root access):**
 
-`sudo apt-get install openssl`
+`sudo apt-get install libssl-dev`
 
-`sudo apt-get install mpich`
+`sudo apt-get install libopenmpi-dev`
 
+### On WSL (Windows Subsystem Linux):
 
-### On Windows systems (tutorials):
+Install OpenSSL and OpenMPI as shown above, they work pretty well on WSL too.
+
+Executing MPI program on WSL can result in an **error** when requesting CMA (Contiguous Memory Allocator) support due to ***restrictive ptrace settings***. To disable restrictive settings you need (requires root access):
+
+`sudo echo 0 > /proc/sys/kernel/yama/ptrace_scope`
+
+### On Windows OS (tutorials):
 
 **1. Download precompiled OpenSSL:**
 
@@ -113,7 +120,7 @@ https://docs.microsoft.com/en-us/archive/blogs/windowshpc/how-to-compile-and-run
 
 ## Compilation commands:
 
-**Compile _serial_ code version:**
+**Compile _serial_ code version (gcc example):**
 
 `gcc -Wall -o bin/md5single source/main/md5_breaker_serial.c -lcrypto -lm`
 
@@ -127,21 +134,23 @@ https://docs.microsoft.com/en-us/archive/blogs/windowshpc/how-to-compile-and-run
 ## Arguments
 
 Binaries execution commands require several arguments in order:
-- **MD5 hash to bruteforce: [string of 16 characters]** 
-  - > **Errors** if length != 16
-- **Alphabet: [ [string,[range of letters],... ] ] (no spaces)** 
-  - Programm takes any string, unfolds all ranges including negative ones, then removes all duplicates and sorts in alphabetical order
-  - Possible substrings: strings of any symbols; _ranges_ that start with `,x-` where "x" is a single letter (`a-Z` is valid if comes first in a string)
-  - To include special symbols "-" and/or "," you need to avoid the order ",x-" where "x" is a single letter. "Space" symbol can not be included (for now).
-  - > **Errors** only if range indentation is incorrect or ambiguos (correct [... ,a-Z ... ,0-9])
+- **MD5 hash to bruteforce: [string of 32 characters]** 
+  - > **Errors** if length != 32
+- **Alphabet: [ [string,[range of characters],... ] ]** 
+  - Programm takes any string, unfolds all *ranges* including negative ones, then removes all duplicates and sorts in alphabetical order
+  -  *Ranges* follow the pattern *"`x-y,`"* where *`x`* and *`y`* are single letters that create a range of any symbols (reverse order too) and "`,`" + "`-`" are used for indentation and are ommitted.
+  - In ranges "`,`" at the end of argument is not required and if present is not counted as a symbol.
+  -  So, for example: *`Sa-sS`* results to *`-asS`* and *`A-S,s`* results to *`sABC..QRS`*
+  - > **Watch out** when trying to include "`,`" and "`-`" as letters in the alphabet.
 - **Word length(s): [ [maximal number] / [range of numbers] ]**
-  - Works in both directions
+  - Ranges work in both directions
   - > **Errors** if number(s) is/are negative
 
 For parallel version there is optional last argument:
-- **Range of process ranks to display times: [ [range of numbers] ]**
-  - Works in both directions
-  - "-1" is a special value to display time measurements for all processes
+- **Range of processes (ranks) that display individual times: [range of numbers]** 
+  - Ranges work in both directions
+  - "-1" is a special value to display all individual times
+  - Omit to not display times for individual processes
 
 At execution the application lets you know if one of your argument was invalid and which was it.
 
