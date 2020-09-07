@@ -44,27 +44,40 @@ Available implementations are written in languages: _C, C++, Fortran_.
 Parallel computing with processes (unlike threads) focuses on computations in **isolated memory** of each process and **allows for multiple nodes** in an architecture.
 
 ### ***
-## Compilating binaries
+# Binaries compilation
 
-This project is designed to be compiled using _**"mpicc"**_ compiler. It is included in **free** MPI libraries sush as _**"MPICH"**_ and _**"OpenMPI"**_.
+The project includes code for _serial_ execution version as well as _parallel_ version for comparsion in execution time between the two.
 
-Project is also using  _**OpenSSL**_ free cryptographic library which includes _"md5.h"_ file.
+But it's not all there's to it - a whole bunch of user's specific _**compilation flags and variables**_ is included!
+
+Located in the file _**"/source/libs/compilation_info.h"**_ rests the most interesting project functionality:
+- Enable/disable _Greedy_ search algorythm (exit on first collision)
+- Set variables to control syncronisation for greedy algorythm (avoiding _"MPI_Abort()"_)
+- Enable dynamic array allocation (heap) instead of preset size static ones (stack) 
+- Set variables controlling the static version array sizes
+- Enable/disable statistics on permutations (before initiating search) that are about to be performed on each process 
+- Enable/disable various time measurements (benchmark) or disable all at once for maximum performance
+- Set a list of processors to be included in time statistics (first + amount)
+- Enable/disable separate output in wide table format (convenient for pasting into "MS Excel"-like software for analysis).
+
+The repository version of the _"compilation_info.h"_ is preset to include all the time benchmark and permutation statistics as well as dynamic array allocation. 
+
+_Parallel_ version needs to be compiled using _**"mpicc"**_ compiler. It is included in MPI libraries sush as _**"MPICH"**_ and _**"OpenMPI"**_ which are free.
+
+_Serial_ version can be compiled by any C/C++ compiler that has access to _"math"_ and _"openssl"_ libraries.
+
+_**OpenSSL**_ is a free cryptographic library used in this project, but it is not present at default in many operating systems and needs to be installed manually.
+
+## Installing compilation dependancies:
 
 ### On UNIX-like systems:
 
-**1. Install both OpenSSL and MPICH using apt-get (requires root permissions):**
+**Install both OpenSSL and MPICH using apt-get (requires root permissions):**
 
 `sudo apt-get install openssl`
 
 `sudo apt-get install mpich`
 
-**2. Compile _serial_ code version:**
-
-`gcc -Wall -o bin/md5single source/main/md5_breaker_serial.c -lcrypto -lm`
-
-**3. Compile _parallel_ code version:**
-
-`mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm`
 
 ### On Windows systems (tutorials):
 
@@ -98,8 +111,46 @@ https://docs.microsoft.com/en-us/message-passing-interface/microsoft-mpi?redirec
 
 https://docs.microsoft.com/en-us/archive/blogs/windowshpc/how-to-compile-and-run-a-simple-ms-mpi-program
 
-Compile with commands given in UNIX-systems instructions (serial and parallel)
+## Compilation commands:
+
+**Compile _serial_ code version:**
+
+`gcc -Wall -o bin/md5single source/main/md5_breaker_serial.c -lcrypto -lm`
+
+**Compile _parallel_ code version:**
+
+`mpicc -Wall -o bin/md5parallel source/main/md5_breaker_parallel.c -lcrypto -lm`
 
 
+# Binaries execution
 
+## Arguments
 
+Binaries execution commands require several arguments in order:
+- **MD5 hash to bruteforce: [string of 16 characters]** 
+  - > **Errors** if length != 16
+- **Alphabet: [ [string,[range of letters],... ] ] (no spaces)** 
+  - Programm takes any string, unfolds all ranges including negative ones, then removes all duplicates and sorts in alphabetical order
+  - Possible substrings: strings of any symbols; _ranges_ that start with `,x-` where "x" is a single letter (`a-Z` is valid if comes first in a string)
+  - To include special symbols "-" and/or "," you need to avoid the order ",x-" where "x" is a single letter. "Space" symbol can not be included (for now).
+  - > **Errors** only if range indentation is incorrect or ambiguos (correct [... ,a-Z ... ,0-9])
+- **Word length(s): [ [maximal number] / [range of numbers] ]**
+  - Works in both directions
+  - > **Errors** if number(s) is/are negative
+
+For parallel version there is optional last argument:
+- **Range of process ranks to display times: [ [range of numbers] ]**
+  - Works in both directions
+  - "-1" is a special value to display time measurements for all processes
+
+At execution the application lets you know if one of your argument was invalid and which was it.
+
+## Launch commands
+
+Launch _Serial_:
+
+`./bin/md5single [args]`
+
+Launch _Parallel_:
+
+`mpiexec -np [number of processes] ./bin/md5parallel [args]`
